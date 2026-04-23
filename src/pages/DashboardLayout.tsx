@@ -1,5 +1,5 @@
-﻿import { NavLink, Outlet, useLocation } from 'react-router-dom';
-import dbsLogo from '../assets/dbs-logo.png';
+import { NavLink, Outlet, useLocation } from 'react-router-dom';
+import bajajLogo from '../assets/bajaj-logo.svg';
 import { useAuthStore } from '../store/authStore';
 
 const pageTitles: Record<string, string> = {
@@ -28,10 +28,10 @@ export default function DashboardLayout() {
     <>
       <aside className="sidebar">
         <div className="sidebar-logo" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <img src={dbsLogo} alt="DBS-Bajaj logo" style={{ width: 60, height: 60, objectFit: 'contain' }} />
+          <img src={bajajLogo} alt="Bajaj General Insurance logo" style={{ width: 84, height: 40, objectFit: 'contain' }} />
           <div className="logo-sub">
-            <span style={{ display: 'block', whiteSpace: 'nowrap' }}>Driver Behaviour</span>
-            <span style={{ display: 'block', whiteSpace: 'nowrap' }}>Score</span>
+            {/* <span style={{ display: 'block', whiteSpace: 'nowrap' }}>Vehicle risk</span> */}
+            {/* <span style={{ display: 'block', whiteSpace: 'nowrap' }}>underwriting</span> */}
           </div>
         </div>
 
@@ -68,9 +68,9 @@ export default function DashboardLayout() {
         <div className="sidebar-footer">
           <div className="api-status">
             <div className="status-dot"></div>
-            DBS-Bajaj API · All systems operational
+            Bajaj API · All systems operational
           </div>
-          <button onClick={logout} className="lookup-btn" style={{ width: '100%', marginTop: 8, background: '#fee2e2', border: '1px solid #dc2626', color: '#991b1b' }}>
+          <button onClick={logout} className="lookup-btn lookup-btn--danger" style={{ width: '100%', marginTop: 8 }}>
             Logout
           </button>
         </div>
@@ -79,11 +79,6 @@ export default function DashboardLayout() {
       <main className="main">
         <header className="topbar">
           <span className="page-title">{activePage}</span>
-          {/* <div className="topbar-right">
-            <div className="topbar-stat">Today's queries: <strong>847</strong></div>
-            <div className="topbar-stat">Avg response: <strong>124ms</strong></div>
-            <div className="topbar-stat" style={{ color: 'var(--green)' }}>API <strong style={{ color: 'var(--green)' }}>99.98%</strong> uptime</div>
-          </div> */}
         </header>
 
         <div className="content">
