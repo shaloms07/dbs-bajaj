@@ -26,6 +26,20 @@ export interface AuthSession {
   user: AuthUser;
 }
 
+type AuthErrorCode = 'auth_required' | 'session_expired' | 'refresh_failed' | 'network_error' | 'invalid_response';
+
+class AuthError extends Error {
+  status?: number;
+  code: AuthErrorCode;
+
+  constructor(message: string, code: AuthErrorCode, status?: number) {
+    super(message);
+    this.name = 'AuthError';
+    this.code = code;
+    this.status = status;
+  }
+}
+
 const ACCESS_TOKEN_REFRESH_BUFFER_MS = 60 * 1000;
 
 let refreshInFlight: Promise<AuthSession> | null = null;
@@ -39,7 +53,7 @@ function toAuthSession(
   fallbackUsername?: string
 ): AuthSession {
   if (!data || !('access_token' in data) || typeof data.access_token !== 'string') {
-    throw new Error('Login response is missing access token');
+    throw new AuthError('Login response is missing access token', 'invalid_response');
   }
 
   return {
@@ -77,13 +91,22 @@ export async function login(payload: LoginPayload): Promise<AuthSession> {
 }
 
 export async function refreshAccessToken(refreshToken: string): Promise<AuthSession> {
-  const response = await fetch(`${apiBaseUrl}/auth/refresh`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({ refresh_token: refreshToken })
-  });
+  let response: Response;
+
+  try {
+    response = await fetch(`${apiBaseUrl}/auth/refresh`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ refresh_token: refreshToken })
+    });
+  } catch (error) {
+    throw new AuthError(
+      error instanceof Error ? error.message : 'Unable to reach auth server for token refresh',
+      'network_error'
+    );
+  }
 
   const data = (await response.json().catch(() => null)) as Partial<LoginResponse> | { detail?: string; message?: string } | null;
 
@@ -92,10 +115,14 @@ export async function refreshAccessToken(refreshToken: string): Promise<AuthSess
       (data && 'detail' in data && typeof data.detail === 'string' && data.detail) ||
       (data && 'message' in data && typeof data.message === 'string' && data.message) ||
       'Token refresh failed';
-    throw new Error(message);
+    throw new AuthError(message, response.status === 401 || response.status === 403 ? 'session_expired' : 'refresh_failed', response.status);
   }
 
   return toAuthSession(data);
+}
+
+export function isSessionExpiredError(error: unknown): boolean {
+  return error instanceof AuthError && error.code === 'session_expired';
 }
 
 function persistRefreshedSession(session: AuthSession) {
@@ -118,7 +145,7 @@ export async function ensureValidAccessToken(forceRefresh = false): Promise<stri
   const authState = useAuthStore.getState();
 
   if (!authState.token) {
-    throw new Error('Missing auth token');
+    throw new AuthError('Missing auth token', 'auth_required');
   }
 
   const hasRefreshToken = Boolean(authState.refreshToken);
@@ -127,7 +154,7 @@ export async function ensureValidAccessToken(forceRefresh = false): Promise<stri
 
   if (refreshTokenExpired) {
     useAuthStore.getState().clearAuth();
-    throw new Error('Session expired. Please sign in again.');
+    throw new AuthError('Session expired. Please sign in again.', 'session_expired');
   }
 
   const shouldRefresh =
@@ -147,11 +174,17 @@ export async function ensureValidAccessToken(forceRefresh = false): Promise<stri
   if (!refreshInFlight) {
     refreshInFlight = refreshAccessToken(authState.refreshToken)
       .then((session) => {
+        console.info('[auth] Access token refreshed successfully');
         persistRefreshedSession(session);
         return session;
       })
       .catch((error) => {
-        useAuthStore.getState().clearAuth();
+        if (isSessionExpiredError(error)) {
+          console.warn('[auth] Refresh token expired or rejected; clearing local auth state');
+          useAuthStore.getState().clearAuth();
+        } else {
+          console.warn('[auth] Token refresh failed without invalidating local session', error);
+        }
         throw error;
       })
       .finally(() => {

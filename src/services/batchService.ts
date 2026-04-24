@@ -1,5 +1,5 @@
 import { useAuthStore } from '../store/authStore';
-import { ensureValidAccessToken } from './authService';
+import { ensureValidAccessToken, isSessionExpiredError } from './authService';
 
 const DEFAULT_API_BASE_URL = 'https://driver-behavior-score.onrender.com';
 const apiBaseUrl = (import.meta.env.VITE_DBS_API_BASE_URL || DEFAULT_API_BASE_URL).replace(/\/+$/, '');
@@ -42,9 +42,11 @@ export async function submitBatch(vehicleNumbers: string[]): Promise<BatchLookup
     try {
       token = await ensureValidAccessToken(true);
       response = await requestBatchLookup(token, vehicleNumbers);
-    } catch {
-      useAuthStore.getState().clearAuth();
-      throw new Error('Session expired. Please sign in again.');
+    } catch (error) {
+      if (isSessionExpiredError(error)) {
+        throw new Error('Session expired. Please sign in again.');
+      }
+      throw error instanceof Error ? error : new Error('Unable to refresh session');
     }
   }
 
@@ -54,6 +56,9 @@ export async function submitBatch(vehicleNumbers: string[]): Promise<BatchLookup
     | null;
 
   if (!response.ok) {
+    if (response.status === 401) {
+      useAuthStore.getState().clearAuth();
+    }
     const message =
       (data && 'detail' in data && typeof data.detail === 'string' && data.detail) ||
       (data && 'message' in data && typeof data.message === 'string' && data.message) ||

@@ -1,5 +1,5 @@
 import { useAuthStore } from '../store/authStore';
-import { ensureValidAccessToken } from './authService';
+import { ensureValidAccessToken, isSessionExpiredError } from './authService';
 
 const DEFAULT_API_BASE_URL = 'https://driver-behavior-score.onrender.com';
 const apiBaseUrl = (import.meta.env.VITE_DBS_API_BASE_URL || DEFAULT_API_BASE_URL).replace(/\/+$/, '');
@@ -32,9 +32,11 @@ async function withAuthorizedRequest(execute: (token: string) => Promise<Respons
     try {
       token = await ensureValidAccessToken(true);
       response = await execute(token);
-    } catch {
-      useAuthStore.getState().clearAuth();
-      throw new Error('Session expired. Please sign in again.');
+    } catch (error) {
+      if (isSessionExpiredError(error)) {
+        throw new Error('Session expired. Please sign in again.');
+      }
+      throw error instanceof Error ? error : new Error('Unable to refresh session');
     }
   }
 
@@ -64,6 +66,9 @@ export async function fetchApiKeys(): Promise<ApiKeyItem[]> {
   const data = (await response.json().catch(() => null)) as ApiKeyItem[] | ApiErrorResponse | null;
 
   if (!response.ok) {
+    if (response.status === 401) {
+      useAuthStore.getState().clearAuth();
+    }
     throw new Error(
       (data && !Array.isArray(data) && ((typeof data.detail === 'string' && data.detail) || (typeof data.message === 'string' && data.message))) ||
         'Unable to fetch API keys'
@@ -92,6 +97,9 @@ export async function createApiKey(name: string): Promise<CreateApiKeyResponse> 
   const data = (await response.json().catch(() => null)) as CreateApiKeyResponse | ApiErrorResponse | null;
 
   if (!response.ok) {
+    if (response.status === 401) {
+      useAuthStore.getState().clearAuth();
+    }
     throw new Error(
       (data && !('raw_key' in data) && ((typeof data.detail === 'string' && data.detail) || (typeof data.message === 'string' && data.message))) ||
         'Unable to create API key'
@@ -120,6 +128,9 @@ export async function renameApiKey(keyId: string, name: string): Promise<ApiKeyI
   const data = (await response.json().catch(() => null)) as ApiKeyItem | ApiErrorResponse | null;
 
   if (!response.ok) {
+    if (response.status === 401) {
+      useAuthStore.getState().clearAuth();
+    }
     throw new Error(
       (data && !('id' in data) && ((typeof data.detail === 'string' && data.detail) || (typeof data.message === 'string' && data.message))) ||
         'Unable to rename API key'
@@ -148,6 +159,9 @@ export async function deleteApiKey(keyId: string): Promise<void> {
   }
 
   if (!response.ok) {
+    if (response.status === 401) {
+      useAuthStore.getState().clearAuth();
+    }
     throw new Error(await parseError(response, 'Unable to revoke API key'));
   }
 }

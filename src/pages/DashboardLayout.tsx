@@ -1,6 +1,8 @@
+import { useEffect } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import bajajLogo from '../assets/bajaj-logo.svg';
 import { useAuthStore } from '../store/authStore';
+import { ensureValidAccessToken } from '../services/authService';
 
 const pageTitles: Record<string, string> = {
   lookup: 'Vehicle Lookup',
@@ -15,9 +17,55 @@ const navItemClass = ({ isActive }: { isActive: boolean }) =>
 export default function DashboardLayout() {
   const clearAuth = useAuthStore((s) => s.clearAuth);
   const user = useAuthStore((s) => s.user);
+  const token = useAuthStore((s) => s.token);
+  const refreshToken = useAuthStore((s) => s.refreshToken);
   const location = useLocation();
   const pathKey = location.pathname.split('/').filter(Boolean).at(-1) ?? 'lookup';
   const activePage = pageTitles[pathKey] ?? 'Vehicle Lookup';
+
+  useEffect(() => {
+    if (!token || !refreshToken) {
+      return;
+    }
+
+    let cancelled = false;
+
+    const checkSession = async (reason: string) => {
+      try {
+        await ensureValidAccessToken();
+      } catch (error) {
+        if (!cancelled) {
+          console.warn(`[auth] Background session check failed during ${reason}`, error);
+        }
+      }
+    };
+
+    void checkSession('layout-mount');
+
+    const intervalId = window.setInterval(() => {
+      void checkSession('interval');
+    }, 60 * 1000);
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        void checkSession('tab-visible');
+      }
+    };
+
+    const handleWindowFocus = () => {
+      void checkSession('window-focus');
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', handleWindowFocus);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(intervalId);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleWindowFocus);
+    };
+  }, [token, refreshToken]);
 
   const logout = () => {
     clearAuth();

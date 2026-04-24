@@ -1,5 +1,5 @@
 import { useAuthStore } from '../store/authStore';
-import { ensureValidAccessToken } from './authService';
+import { ensureValidAccessToken, isSessionExpiredError } from './authService';
 import { ScoreBand, ScoreResult, Violation } from '../types/score';
 import { bandFromScore } from '../utils/bandFromScore';
 
@@ -105,15 +105,20 @@ export async function fetchScore(regNo: string): Promise<ScoreResult> {
     try {
       token = await ensureValidAccessToken(true);
       response = await requestLookup(token);
-    } catch {
-      useAuthStore.getState().clearAuth();
-      throw new Error('Session expired. Please sign in again.');
+    } catch (error) {
+      if (isSessionExpiredError(error)) {
+        throw new Error('Session expired. Please sign in again.');
+      }
+      throw error instanceof Error ? error : new Error('Unable to refresh session');
     }
   }
 
   const data = (await response.json().catch(() => null)) as LookupResponse | { detail?: string; message?: string } | null;
 
   if (!response.ok) {
+    if (response.status === 401) {
+      useAuthStore.getState().clearAuth();
+    }
     const message =
       (data && 'detail' in data && typeof data.detail === 'string' && data.detail) ||
       (data && 'message' in data && typeof data.message === 'string' && data.message) ||

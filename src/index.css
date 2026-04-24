@@ -927,6 +927,28 @@ tbody td {
   border-color: var(--accent);
   background: rgba(79, 142, 247, 0.04);
 }
+.sample-download-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 12px;
+  padding: 9px 13px;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  border-radius: 8px;
+  background: rgba(241, 245, 249, 0.9);
+  color: var(--text2);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
+  box-shadow: 0 6px 14px rgba(15, 23, 42, 0.06);
+}
+.sample-download-btn:hover {
+  transform: translateY(-1px);
+  filter: brightness(0.99);
+  background: rgba(226, 232, 240, 0.95);
+  box-shadow: 0 8px 16px rgba(15, 23, 42, 0.08);
+}
 .upload-icon {
   font-size: 32px;
   margin-bottom: 10px;
@@ -939,14 +961,6 @@ tbody td {
 .upload-sub {
   font-size: 11px;
   color: var(--text3);
-}
-.template-link {
-  display: inline-block;
-  margin-top: 12px;
-  font-size: 11px;
-  color: var(--accent2);
-  text-decoration: none;
-  border-bottom: 1px solid rgba(79, 142, 247, 0.3);
 }
 .batch-progress {
   background: var(--surface2);
@@ -967,19 +981,10 @@ tbody td {
   height: 6px;
 }
 .progress-fill {
-  width: 68%;
   height: 100%;
   background: linear-gradient(90deg, var(--accent), var(--green));
   border-radius: 20px;
-  animation: progressAnim 2s ease-in-out infinite alternate;
-}
-@keyframes progressAnim {
-  from {
-    width: 60%;
-  }
-  to {
-    width: 75%;
-  }
+  transition: width 0.45s ease-out;
 }
 .batch-results-table {
   background: var(--surface);
@@ -987,12 +992,38 @@ tbody td {
   border-radius: 12px;
   overflow: hidden;
 }
+.batch-result-row {
+  cursor: pointer;
+  transition: background-color 0.18s ease;
+}
+.batch-result-row:hover td {
+  background: rgba(79, 142, 247, 0.06);
+}
+.batch-summary-card {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 10px;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.18s ease, background-color 0.18s ease, transform 0.18s ease;
+}
+.batch-summary-card:hover {
+  border-color: var(--accent);
+  background: rgba(79, 142, 247, 0.06);
+  transform: translateY(-1px);
+}
+.batch-summary-card.active {
+  border-color: var(--accent);
+  background: rgba(79, 142, 247, 0.1);
+}
 .results-toolbar {
   padding: 14px 20px;
   border-bottom: 1px solid var(--border);
   display: flex;
   align-items: center;
   gap: 12px;
+  flex-wrap: wrap;
 }
 .results-count {
   font-size: 12px;
@@ -1015,6 +1046,51 @@ tbody td {
 }
 .export-btn:hover {
   background: var(--surface3);
+}
+.batch-filter-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+.batch-filter-label {
+  font-size: 11px;
+  color: var(--text3);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.batch-filter-select {
+  min-width: 160px;
+  padding: 7px 10px;
+  border: 1px solid var(--border2);
+  border-radius: 6px;
+  background: var(--surface2);
+  color: var(--text);
+  font-size: 12px;
+  font-family: "DM Sans", sans-serif;
+}
+.batch-filter-clear {
+  border: 1px solid var(--border2);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text2);
+  padding: 7px 10px;
+  font-size: 12px;
+  cursor: pointer;
+  font-family: "DM Sans", sans-serif;
+}
+.batch-filter-clear:hover {
+  background: var(--surface2);
+}
+.batch-filter-active {
+  padding: 10px 20px;
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+  color: var(--text2);
+  background: rgba(79, 142, 247, 0.04);
+}
+.batch-filter-active strong {
+  color: var(--text);
 }
 .api-layout {
   display: grid;

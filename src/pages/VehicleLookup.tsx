@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useScoreLookup } from '../hooks/useScoreLookup';
 import { scoreViolations } from '../utils/dbsScoring';
 import { ScoreResult } from '../types/score';
@@ -58,9 +59,11 @@ function sanitizeFileName(value: string) {
 }
 
 export default function VehicleLookup() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [regInput, setRegInput] = useState('');
   const [queryReg, setQueryReg] = useState('');
   const [recentQueries, setRecentQueries] = useState<RecentQuery[]>([]);
+  const regNoFromUrl = searchParams.get('regNo')?.toUpperCase().replace(/[^A-Z0-9]/g, '') ?? '';
 
   const formattedReg = useMemo(() => regInput.toUpperCase().replace(/[^A-Z0-9]/g, ''), [regInput]);
   const result = useScoreLookup(queryReg);
@@ -72,11 +75,13 @@ export default function VehicleLookup() {
   const onQuery = () => {
     if (!formattedReg) return;
     setQueryReg(formattedReg);
+    setSearchParams({ regNo: formattedReg });
   };
 
   const onRecentQuery = (reg: string) => {
     setRegInput(reg.replace(/(\w{2})(\d{2})(\w{2})(\d+)/, '$1$2 $3 $4'));
     setQueryReg(reg);
+    setSearchParams({ regNo: reg });
   };
 
   const displayScore = selected ? Math.round(selected.score) : 0;
@@ -384,6 +389,13 @@ export default function VehicleLookup() {
       }
     }, 250);
   };
+
+  useEffect(() => {
+    if (!regNoFromUrl || regNoFromUrl === queryReg) return;
+
+    setRegInput(regNoFromUrl.replace(/(\w{2})(\d{2})(\w{2})(\d+)/, '$1$2 $3 $4'));
+    setQueryReg(regNoFromUrl);
+  }, [queryReg, regNoFromUrl]);
 
   useEffect(() => {
     try {
