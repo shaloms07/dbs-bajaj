@@ -1,7 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useScoreLookup } from '../hooks/useScoreLookup';
-import { scoreViolations } from '../utils/dbsScoring';
 import { ScoreResult } from '../types/score';
 import { scoreColor } from '../utils/scoreColor';
 
@@ -58,74 +57,97 @@ function sanitizeFileName(value: string) {
   return value.replace(/[^a-z0-9]+/gi, '_').replace(/^_+|_+$/g, '').toLowerCase();
 }
 
+function normalizeVehicleNumber(value: string) {
+  return value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+}
+
+function formatVehicleNumber(value: string) {
+  const normalized = normalizeVehicleNumber(value);
+  const match = normalized.match(/^([A-Z]{2})(\d{1,2})([A-Z]{1,3})(\d{1,4})$/);
+  if (!match) return normalized;
+  return `${match[1]} ${match[2]} ${match[3]} ${match[4]}`;
+}
+
 export default function VehicleLookup() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [regInput, setRegInput] = useState('');
   const [queryReg, setQueryReg] = useState('');
   const [recentQueries, setRecentQueries] = useState<RecentQuery[]>([]);
   const regNoFromUrl = searchParams.get('regNo')?.toUpperCase().replace(/[^A-Z0-9]/g, '') ?? '';
+  const includeRc = searchParams.get('include_rc') === 'true';
 
-  const formattedReg = useMemo(() => regInput.toUpperCase().replace(/[^A-Z0-9]/g, ''), [regInput]);
-  const result = useScoreLookup(queryReg);
+  const formattedReg = normalizeVehicleNumber(regInput);
+  const result = useScoreLookup(queryReg, includeRc);
   const selected = result.data as ScoreResult | undefined;
 
   const bandClass = (label: string) =>
     `recent-band band-${label.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')}`;
 
   const onQuery = () => {
-    if (!formattedReg) return;
     setQueryReg(formattedReg);
-    setSearchParams({ regNo: formattedReg });
+    setSearchParams({ regNo: formattedReg, include_rc: String(includeRc) });
   };
 
   const onRecentQuery = (reg: string) => {
-    setRegInput(reg.replace(/(\w{2})(\d{2})(\w{2})(\d+)/, '$1$2 $3 $4'));
-    setQueryReg(reg);
-    setSearchParams({ regNo: reg });
+    setRegInput(formatVehicleNumber(reg));
+    setQueryReg(normalizeVehicleNumber(reg));
+    setSearchParams({ regNo: normalizeVehicleNumber(reg), include_rc: String(includeRc) });
+  };
+
+  const setVehicleView = (nextIncludeRc: boolean) => {
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.set('include_rc', String(nextIncludeRc));
+    if (queryReg) {
+      nextParams.set('regNo', queryReg);
+    }
+    setSearchParams(nextParams);
   };
 
   const displayScore = selected ? Math.round(selected.score) : 0;
   const needleRotation = selected ? (displayScore / 300) * 180 - 90 : -90;
   const arcLength = 267;
-  const minimumVisibleScore = selected?.band === 'EXTREME_RISK' ? 18 : 0;
-  const visualArcScore = Math.min(Math.max(selected ? Math.max(displayScore, minimumVisibleScore) : 0, 0), 300);
+  const visualArcScore = Math.min(Math.max(selected ? displayScore : 0, 0), 300);
   const arcProgress = visualArcScore / 300;
   const arcOffset = arcLength * (1 - arcProgress);
   const [animatedArcOffset, setAnimatedArcOffset] = useState(arcLength);
   const selectedViolations = selected?.violations ?? [];
-  const now = new Date();
-  const windowStart = new Date(now);
-  windowStart.setMonth(windowStart.getMonth() - 12);
-  const inWindowViolations = scoreViolations(selectedViolations, 12, now);
-  const lastViolation = inWindowViolations[0];
-  const monthsAgo = lastViolation
-    ? Math.max(0, Math.round((now.getTime() - new Date(lastViolation.date).getTime()) / (1000 * 60 * 60 * 24 * 30)))
-    : null;
-  const highCount = inWindowViolations.filter((v) => v.thz === 'H').length;
-  const medCount = inWindowViolations.filter((v) => v.thz === 'M').length;
-  const lowCount = inWindowViolations.filter((v) => v.thz === 'L').length;
+  const violationCounts = selected?.violationCounts;
+  const lastViolationAt = selected?.lastViolationDatetime ?? null;
+  const windowStart = selected?.windowStart;
+  const windowEnd = selected?.windowEnd;
   const latestBandLabel = selected ? formatBandLabel(selected.band) : 'Ready';
-  const formatWindowMonth = (date: Date) => date.toLocaleString('en-US', { month: 'short', year: 'numeric' });
   const gaugeColor = selected ? scoreColor(selected.band) : '#16a34a';
   const activeGaugeStroke = selected?.band === 'EXTREME_RISK' ? gaugeColor : 'url(#arcGradActive)';
 
   const currentVehicleSummary = selected
     ? [
         ['Registration No.', selected.regNo || formattedReg || 'N/A'],
-        ['State', selected.stateName || 'Unknown'],
         ['Score', String(displayScore)],
         ['Band', formatBandLabel(selected.band)],
+        ['Premium Modifier', `${selected.premiumModifierPct ?? 0}%`],
+        ['Violations', String(violationCounts?.total ?? selectedViolations.length)],
+        ['Window Start', selected.windowStart ? formatDate(selected.windowStart) : 'N/A'],
+        ['Window End', selected.windowEnd ? formatDate(selected.windowEnd) : 'N/A'],
+        ['Last Violation', selected.lastViolationDatetime ? formatDateTime(selected.lastViolationDatetime) : 'None'],
+        ...(includeRc
+          ? [
+              ['Owner Name', selected.ownerName || 'N/A'],
+              ['Vehicle Type', selected.vehicleType || 'Vehicle'],
+              ['Fuel Type', selected.fuelType || 'N/A'],
+              ['Engine CC', selected.cc ? `${selected.cc}cc` : 'N/A']
+            ]
+          : []),
         ['Queried At', formatDateTime(selected.queriedAt)],
         ['Fresh As Of', formatDate(selected.freshAsOf)]
       ]
     : [];
 
   const exportTableRows = selected
-    ? inWindowViolations.map((violation) => [
+    ? selectedViolations.map((violation) => [
         new Date(violation.date).toLocaleDateString('en-IN'),
-        [violation.challanDetails || violation.type, violation.type].filter(Boolean).join(' - '),
-        [violation.categoryName, violation.categoryDescription].filter(Boolean).join(' - ') || violation.code || 'N/A',
-        `-${violation.impactPoints} pts`
+        violation.challanDetails || violation.type || 'N/A',
+        [violation.categoryName, violation.categoryDescription].filter(Boolean).join(' - ') || violation.categoryCode || 'N/A',
+        `-${violation.impact} pts`
       ])
     : [];
 
@@ -134,11 +156,11 @@ export default function VehicleLookup() {
 
       const summaryRows = [
         ['Vehicle Lookup Summary'],
-        ['Field', 'Value'],
-        ...currentVehicleSummary,
-        [],
-        ['Violation History'],
-        ['Date', 'Violation Details', 'Category', 'Impact'],
+	        ['Field', 'Value'],
+	        ...currentVehicleSummary,
+	        [],
+	        ['Violation History'],
+	        ['Date', 'Violation Details', 'Category', 'Impact'],
         ...exportTableRows
       ];
 
@@ -349,9 +371,9 @@ export default function VehicleLookup() {
 
             <div class="report-section-title">Violation Summary</div>
             <div class="summary-strip">
-              <div><span>Violations</span><strong>${inWindowViolations.length}</strong></div>
-              <div><span>Last violation</span><strong>${lastViolation ? `${monthsAgo ?? 0} mo` : 'None'}</strong></div>
-              <div><span>Window</span><strong>12 months</strong></div>
+              <div><span>Violations</span><strong>${violationCounts?.total ?? selectedViolations.length}</strong></div>
+              <div><span>Last violation</span><strong>${selected.lastViolationDatetime ? formatDate(selected.lastViolationDatetime) : 'None'}</strong></div>
+              <div><span>Window</span><strong>${selected.windowStart ? formatDate(selected.windowStart) : 'N/A'}</strong></div>
             </div>
 
             <div class="report-section-title">Violation History</div>
@@ -393,7 +415,7 @@ export default function VehicleLookup() {
   useEffect(() => {
     if (!regNoFromUrl || regNoFromUrl === queryReg) return;
 
-    setRegInput(regNoFromUrl.replace(/(\w{2})(\d{2})(\w{2})(\d+)/, '$1$2 $3 $4'));
+    setRegInput(formatVehicleNumber(regNoFromUrl));
     setQueryReg(regNoFromUrl);
   }, [queryReg, regNoFromUrl]);
 
@@ -494,13 +516,13 @@ export default function VehicleLookup() {
                 e.preventDefault();
                 onQuery();
               }}
-            >
-              <div>
-                <div className="field-label">Registration Number</div>
+              >
+                <div>
+                  <div className="field-label">Registration Number</div>
                 <input
                   className="reg-input"
                   value={regInput}
-                  placeholder="e.g. UP32 AB 1234"
+                  placeholder="Enter vehicle number"
                   onChange={(e) => setRegInput(e.target.value.toUpperCase())}
                 />
               </div>
@@ -512,6 +534,26 @@ export default function VehicleLookup() {
                 Run lookup
               </button>
             </form>
+
+            <div className="lookup-switch-row">
+              <div className="lookup-switch-copy">
+                <span className="lookup-switch-label">View RC details</span>
+                <strong>{includeRc ? 'On' : 'Off'}</strong>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={includeRc}
+                aria-label={`RC details ${includeRc ? 'on' : 'off'}`}
+                className={`lookup-switch ${includeRc ? 'on' : ''}`}
+                onClick={() => setVehicleView(!includeRc)}
+              >
+                <span className="lookup-switch-track">
+                  <span className="lookup-switch-thumb" />
+                </span>
+                {/* <span className="lookup-switch-state">{includeRc ? 'Turn on' : 'Turn off'}</span> */}
+              </button>
+            </div>
 
             <div className="recent-queries">
               <div className="card-title" style={{ marginBottom: 10 }}>
@@ -661,18 +703,39 @@ export default function VehicleLookup() {
                     <strong>{displayScore}</strong>
                     <small>out of 300</small>
                   </div>
-                  <div className="lookup-highlight">
-                    <span className="lookup-highlight-label">Violations</span>
-                    <strong>{inWindowViolations.length}</strong>
-                    <small>12 month window</small>
-                  </div>
-                  <div className="lookup-highlight">
-                    <span className="lookup-highlight-label">Last violation</span>
-                    <strong>{lastViolation ? `${monthsAgo ?? 0} mo` : 'None'}</strong>
-                    <small>{lastViolation ? formatDate(lastViolation.date) : 'Clean in window'}</small>
-                  </div>
+	                  <div className="lookup-highlight">
+	                    <span className="lookup-highlight-label">Violations</span>
+	                    <strong>{violationCounts?.total ?? selectedViolations.length}</strong>
+	                    <small>{windowStart && windowEnd ? `${formatDate(windowStart)} to ${formatDate(windowEnd)}` : 'Backend window'}</small>
+	                  </div>
+	                  <div className="lookup-highlight">
+	                    <span className="lookup-highlight-label">Last violation</span>
+	                    <strong>{lastViolationAt ? formatDateTime(lastViolationAt) : 'None'}</strong>
+	                    <small>{lastViolationAt ? 'From backend' : 'Clean in window'}</small>
+	                  </div>
                 </div>
               </div>
+
+              {includeRc && (
+                <div className="lookup-rc-grid">
+                  <div className="lookup-rc-card">
+                    <span>Owner Name</span>
+                    <strong>{selected.ownerName || 'N/A'}</strong>
+                  </div>
+                  <div className="lookup-rc-card">
+                    <span>Vehicle Type</span>
+                    <strong>{selected.vehicleType || 'Vehicle'}</strong>
+                  </div>
+                  <div className="lookup-rc-card">
+                    <span>Fuel Type</span>
+                    <strong>{selected.fuelType || 'N/A'}</strong>
+                  </div>
+                  <div className="lookup-rc-card">
+                    <span>Engine CC</span>
+                    <strong>{selected.cc ? `${selected.cc}cc` : 'N/A'}</strong>
+                  </div>
+                </div>
+              )}
             </section>
           )}
 
@@ -681,23 +744,23 @@ export default function VehicleLookup() {
               <div className="violations-header lookup-history-header">
                 <div>
                   <div className="title">Violation History</div>
-                  <div className="subtitle">{inWindowViolations.length} violations in the scoring window</div>
+                  <div className="subtitle">{violationCounts?.total ?? selectedViolations.length} violations returned by the backend</div>
                 </div>
                 <div className="lookup-history-actions">
                   <div className="window-badge">
-                    12-month window - {formatWindowMonth(windowStart)} to {formatWindowMonth(now)}
+                    Backend window - {windowStart ? formatDate(windowStart) : 'N/A'} to {windowEnd ? formatDate(windowEnd) : 'N/A'}
                   </div>
-                  <button type="button" className="lookup-export-btn ghost" onClick={exportPdf}>
-                    Export PDF
-                  </button>
-                  <button type="button" className="lookup-export-btn" onClick={exportCsv}>
-                    Export CSV
+	                  <button type="button" className="lookup-export-btn ghost" onClick={exportPdf}>
+	                    Export PDF
+	                  </button>
+	                  <button type="button" className="lookup-export-btn" onClick={exportCsv}>
+	                    Export CSV
                   </button>
                 </div>
               </div>
 
-              <div className="lookup-table-wrap">
-                <table className="lookup-history-table">
+	              <div className="lookup-table-wrap">
+	                <table className="lookup-history-table">
                   <thead>
                     <tr>
                       <th>Date</th>
@@ -707,17 +770,17 @@ export default function VehicleLookup() {
                     </tr>
                   </thead>
                   <tbody>
-                    {inWindowViolations.length === 0 && (
-                      <tr>
-                        <td colSpan={4} style={{ textAlign: 'center', color: 'var(--text3)', fontSize: 11, padding: '18px 20px' }}>
-                          No violations found in scoring window
-                        </td>
-                      </tr>
-                    )}
-                    {inWindowViolations.map((violation, idx) => {
-                      const categoryLabel = [violation.categoryName, violation.categoryDescription].filter(Boolean).join(' - ');
-                      const impactClass =
-                        violation.thz === 'H' ? 'lookup-history-impact high' : violation.thz === 'M' ? 'lookup-history-impact medium' : 'lookup-history-impact low';
+	                    {selectedViolations.length === 0 && (
+	                      <tr>
+	                        <td colSpan={4} style={{ textAlign: 'center', color: 'var(--text3)', fontSize: 11, padding: '18px 20px' }}>
+	                          No violations found in scoring window
+	                        </td>
+	                      </tr>
+	                    )}
+	                    {selectedViolations.map((violation, idx) => {
+	                      const categoryLabel = [violation.categoryName, violation.categoryDescription].filter(Boolean).join(' - ');
+	                      const impactClass =
+	                        violation.thz === 'H' ? 'lookup-history-impact high' : violation.thz === 'M' ? 'lookup-history-impact medium' : 'lookup-history-impact low';
 
                       return (
                         <tr key={`${violation.type}-${violation.date}-${idx}`}>
@@ -726,8 +789,8 @@ export default function VehicleLookup() {
                             <div className="lookup-violation-main">{violation.challanDetails || violation.type}</div>
                             <div className="lookup-violation-sub">{violation.type}</div>
                           </td>
-                          <td className="lookup-history-category">{categoryLabel || violation.code}</td>
-                          <td className={impactClass}>-{violation.impactPoints} pts</td>
+                          <td className="lookup-history-category">{categoryLabel || violation.categoryCode || 'N/A'}</td>
+                          <td className={impactClass}>-{violation.impact} pts</td>
                         </tr>
                       );
                     })}

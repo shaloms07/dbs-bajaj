@@ -37,6 +37,16 @@ export interface ScoreResult {
   violations: Violation[];
   basePremium?: number;
   adjustedPremium?: number;
+  premiumModifierPct?: number;
+  windowStart?: string;
+  windowEnd?: string;
+  lastViolationDatetime?: string | null;
+  violationCounts?: {
+    total?: number;
+    severe?: number;
+    moderate?: number;
+    low?: number;
+  };
   fuelType?: string;
   stateName?: string;
   cc?: number;
