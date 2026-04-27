@@ -366,7 +366,7 @@ export default function BatchProcessing() {
           <thead>
             <tr>
               <th>Registration No.</th>
-              <th>Vehicle Type</th>
+              {/* <th>Vehicle Type</th> */}
               <th>DBS-Bajaj Score</th>
               <th>Band</th>
               <th>Violations</th>
@@ -396,7 +396,7 @@ export default function BatchProcessing() {
                   <td style={{ fontFamily: 'DM Mono, monospace', fontSize: 11 }}>
                     {formatVehicleNumber(row.vehicle_number)}
                   </td>
-                  <td>{row.category_description || row.category || '-'}</td>
+                  {/* <td>{row.category_description || row.category || '-'}</td> */}
                   <td style={{ fontFamily: 'DM Mono, monospace', color: 'var(--text)' }}>{row.score}</td>
                   <td><span className={bandClass(riskLabel)}>{riskLabel}</span></td>
                   <td>{row.total_violations}</td>

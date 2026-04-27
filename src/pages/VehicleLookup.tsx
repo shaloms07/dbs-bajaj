@@ -387,7 +387,7 @@ export default function VehicleLookup() {
                 </tr>
               </thead>
               <tbody>
-                ${rowsHtml || '<tr><td colspan="4" class="muted">No violations found in scoring window</td></tr>'}
+                ${rowsHtml || '<tr><td colspan="4" class="muted">No violations found in the 24-month window</td></tr>'}
               </tbody>
             </table>
           </div>
@@ -491,7 +491,7 @@ export default function VehicleLookup() {
         <div className="lookup-hero-metrics">
           <div className="lookup-metric">
             <span>Scoring window</span>
-            <strong>12 months</strong>
+            <strong>24 months</strong>
           </div>
           <div className="lookup-metric">
             <span>Saved lookups</span>
@@ -592,7 +592,7 @@ export default function VehicleLookup() {
               <div className="lookup-empty-icon">01</div>
               <div className="lookup-empty-copy">
                 <h2>Search to load a score</h2>
-                <p>Once you run a lookup, we’ll show the gauge, current band, and the last 12 months of violations here.</p>
+                <p>Once you run a lookup, we’ll show the gauge, current band, and the last 24 months of violations here.</p>
               </div>
               <div className="lookup-empty-steps">
                 <div>
@@ -850,7 +850,7 @@ export default function VehicleLookup() {
 	                    {selectedViolations.length === 0 && (
 	                      <tr>
 	                        <td colSpan={4} style={{ textAlign: 'center', color: 'var(--text3)', fontSize: 11, padding: '18px 20px' }}>
-	                          No violations found in scoring window
+                          No violations found in the 24-month window
 	                        </td>
 	                      </tr>
 	                    )}
