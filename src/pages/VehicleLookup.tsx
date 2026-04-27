@@ -564,7 +564,16 @@ export default function VehicleLookup() {
                   recentQueries.map((item) => (
                     <div key={item.regNo} className="recent-item" onClick={() => onRecentQuery(item.regNo)}>
                       <span className="recent-reg">{item.regNo.replace(/(\w{2})(\d{2})(\w{2})(\d+)/, '$1 $2 $3 $4')}</span>
-                      <span className={bandClass(item.band)}>{item.band}</span>
+                      <span
+                        className={bandClass(item.band)}
+                        style={{
+                          background: `${scoreColor(item.band)}18`,
+                          border: `1px solid ${scoreColor(item.band)}33`,
+                          color: scoreColor(item.band)
+                        }}
+                      >
+                        {item.band}
+                      </span>
                     </div>
                   ))
                 ) : (
@@ -603,13 +612,72 @@ export default function VehicleLookup() {
           )}
 
           {queryReg && result.isLoading && (
-            <div className="lookup-empty-card card">
-              <div className="lookup-empty-icon">⌛</div>
-              <div className="lookup-empty-copy">
-                <h2>Loading vehicle score</h2>
-                <p>Fetching the latest lookup and violation history now.</p>
-              </div>
-            </div>
+            <>
+              <section className="lookup-score-card lookup-skeleton-card">
+                <div className="lookup-score-head">
+                  <div className="lookup-skeleton-stack">
+                    <div className="skeleton skeleton-line skeleton-line-lg" />
+                    <div className="skeleton skeleton-line skeleton-line-sm" />
+                  </div>
+                  <div className="skeleton skeleton-pill" />
+                </div>
+
+                <div className="lookup-score-body">
+                  <div className="gauge-container">
+                    <div className="skeleton skeleton-gauge" />
+                    <div className="gauge-score-label">
+                      <div className="skeleton skeleton-number" />
+                      <div className="skeleton skeleton-band" />
+                    </div>
+                  </div>
+
+                  <div className="lookup-score-highlights">
+                    <div className="lookup-highlight skeleton-highlight">
+                      <div className="skeleton skeleton-line skeleton-line-sm" />
+                      <div className="skeleton skeleton-value" />
+                      <div className="skeleton skeleton-line skeleton-line-xs" />
+                    </div>
+                    <div className="lookup-highlight skeleton-highlight">
+                      <div className="skeleton skeleton-line skeleton-line-sm" />
+                      <div className="skeleton skeleton-value" />
+                      <div className="skeleton skeleton-line skeleton-line-xs" />
+                    </div>
+                    <div className="lookup-highlight skeleton-highlight">
+                      <div className="skeleton skeleton-line skeleton-line-sm" />
+                      <div className="skeleton skeleton-value" />
+                      <div className="skeleton skeleton-line skeleton-line-xs" />
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              <section className="violations-card lookup-history-card lookup-skeleton-card">
+                <div className="violations-header lookup-history-header">
+                  <div className="lookup-skeleton-stack">
+                    <div className="skeleton skeleton-line skeleton-line-md" />
+                    <div className="skeleton skeleton-line skeleton-line-sm" />
+                  </div>
+                  <div className="lookup-history-actions">
+                    <div className="skeleton skeleton-pill skeleton-pill-sm" />
+                    <div className="skeleton skeleton-pill skeleton-pill-sm" />
+                    <div className="skeleton skeleton-pill skeleton-pill-sm" />
+                  </div>
+                </div>
+
+                <div className="lookup-table-wrap">
+                  <div className="lookup-skeleton-table">
+                    {Array.from({ length: 5 }).map((_, idx) => (
+                      <div key={idx} className="lookup-skeleton-row">
+                        <div className="skeleton skeleton-cell skeleton-cell-date" />
+                        <div className="skeleton skeleton-cell skeleton-cell-main" />
+                        <div className="skeleton skeleton-cell skeleton-cell-category" />
+                        <div className="skeleton skeleton-cell skeleton-cell-impact" />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </section>
+            </>
           )}
 
           {queryReg && result.isError && !result.isLoading && (
@@ -631,7 +699,16 @@ export default function VehicleLookup() {
                     Queried: {formatDateTime(selected.queriedAt)} · Fresh as of {formatDate(selected.freshAsOf)}
                   </div>
                 </div>
-                <div className="lookup-band-pill">{formatBandLabel(selected.band)}</div>
+                <div
+                  className="lookup-band-pill"
+                  style={{
+                    background: `${gaugeColor}1A`,
+                    borderColor: `${gaugeColor}40`,
+                    color: gaugeColor
+                  }}
+                >
+                  {formatBandLabel(selected.band)}
+                </div>
               </div>
 
               <div className="lookup-score-body">

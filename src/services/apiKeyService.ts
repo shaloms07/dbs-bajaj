@@ -1,7 +1,7 @@
 import { useAuthStore } from '../store/authStore';
 import { ensureValidAccessToken, isSessionExpiredError } from './authService';
 
-const DEFAULT_API_BASE_URL = 'https://driver-behavior-score.onrender.com';
+const DEFAULT_API_BASE_URL = 'https://citihubkiosk.com/dbs';
 const apiBaseUrl = (import.meta.env.VITE_DBS_API_BASE_URL || DEFAULT_API_BASE_URL).replace(/\/+$/, '');
 
 export interface ApiKeyItem {

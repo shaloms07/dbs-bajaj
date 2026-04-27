@@ -2,7 +2,7 @@ import { useAuthStore } from '../store/authStore';
 import { ensureValidAccessToken, isSessionExpiredError } from './authService';
 import { ScoreBand, ScoreResult, Violation } from '../types/score';
 
-const DEFAULT_API_BASE_URL = 'https://driver-behavior-score.onrender.com';
+const DEFAULT_API_BASE_URL = 'https://citihubkiosk.com/dbs';
 const apiBaseUrl = (import.meta.env.VITE_DBS_API_BASE_URL || DEFAULT_API_BASE_URL).replace(/\/+$/, '');
 
 interface LookupViolationResponse {
@@ -96,24 +96,6 @@ function mapSeverityToThz(severity: string): Violation['thz'] {
   return 'L';
 }
 
-function mapRiskLevelToBand(riskLevel: string): ScoreBand {
-  const normalized = riskLevel.trim().toUpperCase().replace(/[^A-Z]+/g, '_').replace(/^_+|_+$/g, '');
-  const allowed: ScoreBand[] = [
-    'EXEMPLARY',
-    'RESPONSIBLE',
-    'AVERAGE',
-    'MARGINAL',
-    'AT_RISK',
-    'HIGH_RISK',
-    'SERIOUS_RISK',
-    'CHRONIC_VIOLATOR',
-    'HABITUAL_OFFENDER',
-    'EXTREME_RISK'
-  ];
-
-  return allowed.includes(normalized as ScoreBand) ? (normalized as ScoreBand) : 'AVERAGE';
-}
-
 function mapViolationStatus(paidStatus: boolean): Violation['status'] {
   return paidStatus ? 'Paid' : 'Open';
 }
@@ -132,10 +114,6 @@ function toNumber(value: unknown, fallback = 0) {
     return Number.isFinite(parsed) ? parsed : fallback;
   }
   return fallback;
-}
-
-function toString(value: unknown, fallback = '') {
-  return typeof value === 'string' ? value : fallback;
 }
 
 function pickStats(data: LookupResponse): LookupStatsResponse {
@@ -196,7 +174,7 @@ export async function fetchScore(regNo: string, includeRc = false): Promise<Scor
   const stats = pickStats(lookup);
   const vehicle = lookup.vehicle ?? null;
   const score = toNumber(stats.score ?? lookup.score);
-  const band = mapRiskLevelToBand(toString(stats.risk_level ?? lookup.risk_level));
+  const band = (stats.risk_level ?? lookup.risk_level ?? 'AVERAGE') as ScoreBand;
   const basePremium = toNumber(lookup.dbs?.base_premium ?? lookup.base_premium);
   const adjustedPremium = toNumber(lookup.dbs?.adjusted_premium ?? lookup.adjusted_premium);
   const premiumModifierPct = toNumber(stats.premium_modifier_pct ?? lookup.dbs?.premium_modifier_pct ?? lookup.premium_modifier_pct);

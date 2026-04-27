@@ -259,7 +259,7 @@ export default function APIConsole() {
             {"<"}your-api-key{">"}
             <br />
             <span style={{ color: "var(--text3)" }}>Base URL</span>{" "}
-            https://driver-behavior-score.onrender.com
+            https://citihubkiosk.com/dbs
             <br />
             <span style={{ color: "var(--text3)" }}>Use the API keys</span> to
             authenticate these public endpoints.

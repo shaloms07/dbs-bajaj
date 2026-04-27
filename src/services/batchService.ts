@@ -1,7 +1,7 @@
 import { useAuthStore } from '../store/authStore';
 import { ensureValidAccessToken, isSessionExpiredError } from './authService';
 
-const DEFAULT_API_BASE_URL = 'https://driver-behavior-score.onrender.com';
+const DEFAULT_API_BASE_URL = 'https://citihubkiosk.com/dbs';
 const apiBaseUrl = (import.meta.env.VITE_DBS_API_BASE_URL || DEFAULT_API_BASE_URL).replace(/\/+$/, '');
 
 export interface BatchLookupResult {
@@ -21,7 +21,7 @@ export interface BatchLookupResponse {
 }
 
 async function requestBatchLookup(accessToken: string, vehicleNumbers: string[]) {
-  return fetch(`${apiBaseUrl}/dashboard/lookup/batch`, {
+  return fetch(`${apiBaseUrl}/dashboard/lookup/batch?include_rc=false`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
