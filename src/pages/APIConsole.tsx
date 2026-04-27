@@ -1,52 +1,67 @@
-import { useMemo, useState } from "react";
-import {
-  useApiKeys,
-  useCreateApiKey,
-  useDeleteApiKey,
-  useRenameApiKey,
-} from "../hooks/useApiKeys";
-import { ApiKeyItem, CreateApiKeyResponse } from "../services/apiKeyService";
+import { useMemo, useState } from 'react';
+import { useApiKeys, useCreateApiKey, useDeleteApiKey, useRenameApiKey } from '../hooks/useApiKeys';
+import { ApiKeyItem, CreateApiKeyResponse } from '../services/apiKeyService';
 
-const publicApis = [
+const endpointDocs = [
   {
-    method: "GET",
-    path: "/api/v1/score/{vehicle_number}",
-    title: "Get Score",
-    description: "Get the DBS-Bajaj score and premium view for a vehicle number.",
-    auth: "x-api-key",
-    sampleVehicle: "UP32AB1234",
+    method: 'GET',
+    path: '/api/v1/score/{vehicle_number}',
+    title: 'Get Score',
+    description: 'Returns the DBS score, risk label, premium modifier, and core score summary for a vehicle.',
+    auth: 'x-api-key',
+    params: ['Path: vehicle_number', 'Header: x-api-key', 'Base URL: https://citihubkiosk.com/dbs'],
+    sampleVehicle: 'UP32AB1234'
   },
   {
-    method: "GET",
-    path: "/api/v1/violations/{vehicle_number}",
-    title: "Get Violations",
-    description:
-      "Get active challans and violation details for a vehicle number.",
-    auth: "x-api-key",
-    sampleVehicle: "MH04CD5678",
+    method: 'GET',
+    path: '/api/v1/violations/{vehicle_number}',
+    title: 'Get Violations',
+    description: 'Returns challans, offense details, severity, deduction points, and violation metadata.',
+    auth: 'x-api-key',
+    params: ['Path: vehicle_number', 'Header: x-api-key', 'Use for violation-history screens'],
+    sampleVehicle: 'MH04CD5678'
   },
   {
-    method: "GET",
-    path: "/api/v1/vehicles/{vehicle_number}",
-    title: "Get Vehicle",
-    description: "Get RC and vehicle profile details for a vehicle number.",
-    auth: "x-api-key",
-    sampleVehicle: "DL8CAF5031",
+    method: 'GET',
+    path: '/api/v1/vehicles/{vehicle_number}',
+    title: 'Get Vehicle',
+    description: 'Returns RC and vehicle profile details for a vehicle number.',
+    auth: 'x-api-key',
+    params: ['Path: vehicle_number', 'Header: x-api-key', 'Use for RC/profile lookup'],
+    sampleVehicle: 'DL8CAF5031'
+  }
+] as const;
+
+const gettingStarted = [
+  {
+    step: '1',
+    title: 'Create an API key',
+    description: 'Generate a key from the API Keys panel below before calling any DBS endpoint.'
   },
+  {
+    step: '2',
+    title: 'Copy it securely',
+    description: 'Store the raw key somewhere safe. You will use it later to authenticate every API request.'
+  },
+  {
+    step: '3',
+    title: 'Call the endpoints',
+    description: 'Send the key in the `x-api-key` header and use the endpoint reference below to integrate.'
+  }
 ] as const;
 
 function formatDate(value: string | null) {
-  if (!value) return "Never";
+  if (!value) return 'Never';
 
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
 
-  return date.toLocaleString("en-IN", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
+  return date.toLocaleString('en-IN', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
   });
 }
 
@@ -61,7 +76,7 @@ function ApiKeyRow({
   onSaveRename,
   onRevoke,
   renamePending,
-  deletePending,
+  deletePending
 }: {
   item: ApiKeyItem;
   status: 'active' | 'inactive' | 'revoked';
@@ -100,9 +115,7 @@ function ApiKeyRow({
         </div>
         <div className="api-key-actions">
           {isReadOnly ? (
-            <span className="api-key-row-note">
-              {status === 'revoked' ? 'This key has been revoked.' : 'This key is inactive.'}
-            </span>
+            <span className="api-key-row-note">{status === 'revoked' ? 'This key has been revoked.' : 'This key is inactive.'}</span>
           ) : isEditing ? (
             <>
               <button className="api-action-btn primary" onClick={onSaveRename} disabled={renamePending || !editName.trim()}>
@@ -144,19 +157,14 @@ export default function APIConsole() {
   const renameMutation = useRenameApiKey();
   const deleteMutation = useDeleteApiKey();
 
-  const [newKeyName, setNewKeyName] = useState("");
-  const [createdKey, setCreatedKey] = useState<CreateApiKeyResponse | null>(
-    null,
-  );
-  const [copiedValue, setCopiedValue] = useState("");
+  const [newKeyName, setNewKeyName] = useState('');
+  const [createdKey, setCreatedKey] = useState<CreateApiKeyResponse | null>(null);
+  const [copiedValue, setCopiedValue] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editingName, setEditingName] = useState("");
+  const [editingName, setEditingName] = useState('');
   const [revokedKeys, setRevokedKeys] = useState<ApiKeyItem[]>([]);
 
-  const activeKeyCount = useMemo(
-    () => apiKeys.filter((key) => key.is_active).length,
-    [apiKeys],
-  );
+  const activeKeyCount = useMemo(() => apiKeys.filter((key) => key.is_active).length, [apiKeys]);
 
   const visibleKeys = useMemo(() => {
     const apiKeyIds = new Set(apiKeys.map((key) => key.id));
@@ -168,10 +176,10 @@ export default function APIConsole() {
       await navigator.clipboard.writeText(value);
       setCopiedValue(value);
       window.setTimeout(() => {
-        setCopiedValue((current) => (current === value ? "" : current));
+        setCopiedValue((current) => (current === value ? '' : current));
       }, 2000);
     } catch {
-      setCopiedValue("");
+      setCopiedValue('');
     }
   }
 
@@ -181,7 +189,7 @@ export default function APIConsole() {
 
     const result = await createMutation.mutateAsync(trimmedName);
     setCreatedKey(result);
-    setNewKeyName("");
+    setNewKeyName('');
   }
 
   async function handleSaveRename() {
@@ -190,16 +198,14 @@ export default function APIConsole() {
 
     await renameMutation.mutateAsync({
       keyId: editingId,
-      name: trimmedName,
+      name: trimmedName
     });
     setEditingId(null);
-    setEditingName("");
+    setEditingName('');
   }
 
   async function handleRevoke(item: ApiKeyItem) {
-    const confirmed = window.confirm(
-      `Revoke API key "${item.name}"? This action cannot be undone.`,
-    );
+    const confirmed = window.confirm(`Revoke API key "${item.name}"? This action cannot be undone.`);
     if (!confirmed) return;
 
     await deleteMutation.mutateAsync(item.id);
@@ -210,242 +216,167 @@ export default function APIConsole() {
         {
           ...item,
           is_active: false,
-          last_used_at: item.last_used_at,
-        },
+          last_used_at: item.last_used_at
+        }
       ];
     });
     if (editingId === item.id) {
       setEditingId(null);
-      setEditingName("");
+      setEditingName('');
     }
   }
 
   return (
-    <div className="api-layout">
-      <div>
-        <div className="card" style={{ marginBottom: 16 }}>
-          <div className="card-title">Public APIs</div>
-          <div className="api-catalog">
-            {publicApis.map((api) => (
-              <div key={api.path} className="api-endpoint-card">
-                <div className="api-endpoint-header">
-                  <span className="api-method-tag">{api.method}</span>
-                  <span className="api-endpoint-path">{api.path}</span>
-                </div>
-                <div className="api-endpoint-title">{api.title}</div>
-                <div className="api-endpoint-description">
-                  {api.description}
-                </div>
-                <div className="api-endpoint-meta">
-                  <span>Auth: {api.auth}</span>
-                  <span>Vehicle: {api.sampleVehicle}</span>
+    <div className="api-page">
+      <section className="card api-hero-card">
+        <p className="api-eyebrow">DBS API Console</p>
+        <h1>Integrate the DBS-Bajaj API into your system</h1>
+        <p>
+          Use this page to generate a key, keep it safe, and then call the DBS endpoints from your application using the
+          <code>x-api-key</code> header.
+        </p>
+        <div className="api-hero-grid">
+          <div className="api-hero-tile">
+            <span>Base URL</span>
+            <strong>https://citihubkiosk.com/dbs</strong>
+          </div>
+          <div className="api-hero-tile">
+            <span>Authentication</span>
+            <strong>x-api-key</strong>
+          </div>
+          <div className="api-hero-tile">
+            <span>Recommended flow</span>
+            <strong>Generate key, copy safely, then call APIs</strong>
+          </div>
+        </div>
+      </section>
+
+      <section className="api-two-column">
+        <div className="card api-guide-card">
+          <div className="card-title">How to use this page</div>
+          <div className="api-step-list">
+            {gettingStarted.map((item) => (
+              <div key={item.step} className="api-step-card">
+                <div className="api-step-number">{item.step}</div>
+                <div>
+                  <div className="api-step-title">{item.title}</div>
+                  <div className="api-step-description">{item.description}</div>
                 </div>
               </div>
             ))}
           </div>
-          <div
-            style={{
-              marginTop: 14,
-              padding: 12,
-              background: "var(--surface2)",
-              borderRadius: 8,
-              fontFamily: "DM Mono, monospace",
-              fontSize: 11,
-              color: "var(--text2)",
-              lineHeight: 1.8,
-            }}
-          >
-            <span style={{ color: "var(--text3)" }}>Header</span> x-api-key:{" "}
-            {"<"}your-api-key{">"}
-            <br />
-            <span style={{ color: "var(--text3)" }}>Base URL</span>{" "}
-            https://citihubkiosk.com/dbs
-            <br />
-            <span style={{ color: "var(--text3)" }}>Use the API keys</span> to
-            authenticate these public endpoints.
+          <div className="api-callout">
+            After you generate a key, store the raw value somewhere secure. You will use that same key for every other DBS endpoint.
           </div>
         </div>
-      </div>
-      <div className="card" style={{ marginBottom: 16 }}>
-        <div className="card-title">API Keys</div>
-        <div className="api-key-create-row">
-          <input
-            value={newKeyName}
-            onChange={(event) => setNewKeyName(event.target.value)}
-            className="api-key-input"
-            placeholder="Give this key a name"
-          />
-          <button
-            className="api-action-btn primary api-create-btn"
-            onClick={handleCreateKey}
-            disabled={createMutation.isPending || !newKeyName.trim()}
-          >
-            {createMutation.isPending ? "Creating..." : "Create API Key"}
-          </button>
-        </div>
-        {createMutation.error ? (
-          <div className="api-key-message api-key-error">
-            {createMutation.error.message}
-          </div>
-        ) : null}
-        {createdKey ? (
-          <div className="api-key-created">
-            <div className="field-label">New API Key</div>
-            <div className="api-key-box">
-              <div className="api-key-value">{createdKey.raw_key}</div>
-              <button
-                className="api-action-btn"
-                onClick={() => copyText(createdKey.raw_key)}
-              >
-                {copiedValue === createdKey.raw_key ? "Copied" : "Copy"}
-              </button>
-            </div>
-            <div className="api-key-message api-key-warning">
-              {createdKey.warning}
-            </div>
-          </div>
-        ) : null}
-        <div className="api-key-summary">
-          <div className="sla-item">
-            <div className="sla-value">{apiKeys.length}</div>
-            <div className="sla-label">Total Keys</div>
-          </div>
-          <div className="sla-item">
-            <div className="sla-value">{activeKeyCount}</div>
-            <div className="sla-label">Active Keys</div>
-          </div>
-        </div>
-        <div style={{ marginTop: 14 }}>
-          <div className="field-label">Stored Keys</div>
-          {isLoading ? (
-            <div className="api-key-empty">Loading API keys...</div>
-          ) : null}
-          {error ? (
-            <div className="api-key-message api-key-error">{error.message}</div>
-          ) : null}
-          {!isLoading && !error && apiKeys.length === 0 ? (
-            <div className="api-key-empty">No API keys created yet.</div>
-          ) : null}
-          {!isLoading && !error
-            ? visibleKeys.map((item) => (
-                <ApiKeyRow
-                  key={item.id}
-                  item={item}
-                  status={
-                    revokedKeys.some((key) => key.id === item.id)
-                      ? 'revoked'
-                      : item.is_active
-                        ? 'active'
-                        : 'inactive'
-                  }
-                  isEditing={editingId === item.id && item.is_active && !revokedKeys.some((key) => key.id === item.id)}
-                  editName={editingId === item.id ? editingName : item.name}
-                  onEditNameChange={setEditingName}
-                  onStartRename={(keyItem) => {
-                    if (!keyItem.is_active || revokedKeys.some((key) => key.id === keyItem.id)) return;
-                    setEditingId(keyItem.id);
-                    setEditingName(keyItem.name);
-                  }}
-                  onCancelRename={() => {
-                    setEditingId(null);
-                    setEditingName("");
-                  }}
-                  onSaveRename={handleSaveRename}
-                  onRevoke={handleRevoke}
-                  renamePending={
-                    renameMutation.isPending && editingId === item.id
-                  }
-                  deletePending={deleteMutation.isPending}
-                />
-              ))
-            : null}
-        </div>
-        {renameMutation.error || deleteMutation.error ? (
-          <div className="api-key-message api-key-error">
-            {renameMutation.error?.message || deleteMutation.error?.message}
-          </div>
-        ) : null}
-      </div>
 
-      {/* <div className="card">
-          <div className="card-title">SLA Metrics (Live)</div>
-          <div className="sla-grid">
+        <div className="card">
+          <div className="card-title">API Keys</div>
+          <div className="api-key-create-row">
+            <input
+              value={newKeyName}
+              onChange={(event) => setNewKeyName(event.target.value)}
+              className="api-key-input"
+              placeholder="Give this key a name"
+            />
+            <button className="api-action-btn primary api-create-btn" onClick={handleCreateKey} disabled={createMutation.isPending || !newKeyName.trim()}>
+              {createMutation.isPending ? 'Creating...' : 'Create API Key'}
+            </button>
+          </div>
+          {createMutation.error ? <div className="api-key-message api-key-error">{createMutation.error.message}</div> : null}
+          {createdKey ? (
+            <div className="api-key-created">
+              <div className="field-label">New API Key</div>
+              <div className="api-key-box">
+                <div className="api-key-value">{createdKey.raw_key}</div>
+                <button className="api-action-btn" onClick={() => copyText(createdKey.raw_key)}>
+                  {copiedValue === createdKey.raw_key ? 'Copied' : 'Copy'}
+                </button>
+              </div>
+              <div className="api-key-message api-key-warning">{createdKey.warning}</div>
+            </div>
+          ) : null}
+          <div className="api-key-summary">
             <div className="sla-item">
-              <div className="sla-value">99.98%</div>
-              <div className="sla-label">Uptime (30d)</div>
+              <div className="sla-value">{apiKeys.length}</div>
+              <div className="sla-label">Total Keys</div>
             </div>
             <div className="sla-item">
-              <div className="sla-value">124ms</div>
-              <div className="sla-label">Avg Response</div>
-            </div>
-            <div className="sla-item">
-              <div className="sla-value">847</div>
-              <div className="sla-label">Calls Today</div>
+              <div className="sla-value">{activeKeyCount}</div>
+              <div className="sla-label">Active Keys</div>
             </div>
           </div>
-        </div> */}
+          <div style={{ marginTop: 14 }}>
+            <div className="field-label">Stored Keys</div>
+            {isLoading ? <div className="api-key-empty">Loading API keys...</div> : null}
+            {error ? <div className="api-key-message api-key-error">{error.message}</div> : null}
+            {!isLoading && !error && apiKeys.length === 0 ? <div className="api-key-empty">No API keys created yet.</div> : null}
+            {!isLoading && !error
+              ? visibleKeys.map((item) => (
+                  <ApiKeyRow
+                    key={item.id}
+                    item={item}
+                    status={revokedKeys.some((key) => key.id === item.id) ? 'revoked' : item.is_active ? 'active' : 'inactive'}
+                    isEditing={editingId === item.id && item.is_active && !revokedKeys.some((key) => key.id === item.id)}
+                    editName={editingId === item.id ? editingName : item.name}
+                    onEditNameChange={setEditingName}
+                    onStartRename={(keyItem) => {
+                      if (!keyItem.is_active || revokedKeys.some((key) => key.id === keyItem.id)) return;
+                      setEditingId(keyItem.id);
+                      setEditingName(keyItem.name);
+                    }}
+                    onCancelRename={() => {
+                      setEditingId(null);
+                      setEditingName('');
+                    }}
+                    onSaveRename={handleSaveRename}
+                    onRevoke={handleRevoke}
+                    renamePending={renameMutation.isPending && editingId === item.id}
+                    deletePending={deleteMutation.isPending}
+                  />
+                ))
+              : null}
+          </div>
+          {renameMutation.error || deleteMutation.error ? (
+            <div className="api-key-message api-key-error">{renameMutation.error?.message || deleteMutation.error?.message}</div>
+          ) : null}
+        </div>
+      </section>
 
-      {/* <div className="card">
-        <div className="card-title">Recent API Calls</div>
-        <div className="log-list">
-          <div className="log-item" style={{ background: 'var(--surface3)', fontSize: 10, fontWeight: 500 }}>
-            <span>TIME</span>
-            <span>REG NO.</span>
-            <span>ENDPOINT</span>
-            <span>RESP (ms)</span>
-            <span>STATUS</span>
-          </div>
-          <div className="log-item">
-            <span className="log-time">11:48:32</span>
-            <span className="log-reg">UP32AB****</span>
-            <span className="log-endpoint">/v1/score</span>
-            <span className="log-ms">112ms</span>
-            <span className="log-status log-200">200</span>
-          </div>
-          <div className="log-item">
-            <span className="log-time">11:48:11</span>
-            <span className="log-reg">MH04CD****</span>
-            <span className="log-endpoint">/v1/score</span>
-            <span className="log-ms">98ms</span>
-            <span className="log-status log-200">200</span>
-          </div>
-          <div className="log-item">
-            <span className="log-time">11:47:59</span>
-            <span className="log-reg">DL8CAF****</span>
-            <span className="log-endpoint">/v1/score</span>
-            <span className="log-ms">134ms</span>
-            <span className="log-status log-200">200</span>
-          </div>
-          <div className="log-item">
-            <span className="log-time">11:47:45</span>
-            <span className="log-reg">KA01MN****</span>
-            <span className="log-endpoint">/v1/score</span>
-            <span className="log-ms">-</span>
-            <span className="log-status log-404">404</span>
-          </div>
-          <div className="log-item">
-            <span className="log-time">11:47:30</span>
-            <span className="log-reg">TN09GH****</span>
-            <span className="log-endpoint">/v1/score</span>
-            <span className="log-ms">141ms</span>
-            <span className="log-status log-200">200</span>
-          </div>
-          <div className="log-item">
-            <span className="log-time">11:47:18</span>
-            <span className="log-reg">UP80EF****</span>
-            <span className="log-endpoint">/v1/batch</span>
-            <span className="log-ms">2.1s</span>
-            <span className="log-status log-200">200</span>
-          </div>
-          <div className="log-item">
-            <span className="log-time">11:46:55</span>
-            <span className="log-reg">GJ05AB****</span>
-            <span className="log-endpoint">/v1/score</span>
-            <span className="log-ms">119ms</span>
-            <span className="log-status log-200">200</span>
+      <section className="card api-reference-card">
+        <div className="api-reference-header">
+          <div>
+            <div className="card-title">Endpoint reference</div>
+            <p className="api-reference-copy">
+              These are the public DBS endpoints you can integrate after generating a key. Each request should include the
+              <code>x-api-key</code> header.
+            </p>
           </div>
         </div>
-      </div> */}
+        <div className="api-catalog">
+          {endpointDocs.map((api) => (
+            <div key={api.path} className="api-endpoint-card">
+              <div className="api-endpoint-header">
+                <span className="api-method-tag">{api.method}</span>
+                <span className="api-endpoint-path">{api.path}</span>
+              </div>
+              <div className="api-endpoint-title">{api.title}</div>
+              <div className="api-endpoint-description">{api.description}</div>
+              <div className="api-endpoint-param-list">
+                {api.params.map((param) => (
+                  <span key={param} className="api-param-chip">
+                    {param}
+                  </span>
+                ))}
+              </div>
+              <div className="api-endpoint-meta">
+                <span>Auth: {api.auth}</span>
+                <span>Vehicle: {api.sampleVehicle}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
     </div>
   );
 }
