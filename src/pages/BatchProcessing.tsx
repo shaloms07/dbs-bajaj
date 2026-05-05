@@ -367,7 +367,7 @@ export default function BatchProcessing() {
             <tr>
               <th>Registration No.</th>
               {/* <th>Vehicle Type</th> */}
-              <th>DBS-Bajaj Score</th>
+              <th>DBS</th>
               <th>Band</th>
               <th>Violations</th>
               <th>Premium Modifier (%)</th>
