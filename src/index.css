@@ -73,8 +73,18 @@ samp {
 }
 
 .sidebar-logo {
-  padding: 24px 20px 20px;
+  /* padding: 24px 20px 20px; */
   border-bottom: 1px solid rgba(255, 255, 255, 0.14);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  /* width: fit-content; */
+  /* padding: 6px 8px; */
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  box-shadow: 0 16px 32px rgba(0, 18, 39, 0.22);
+  margin: 20px 12px;
 }
 
 .logo-mark {
