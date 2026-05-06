@@ -85,7 +85,7 @@ export default function DashboardLayout() {
 
         <div className="insurer-badge">
           <div className="label">Logged in as</div>
-          <div className="name">{user?.insurer ?? 'Bajaj General Insurance'}</div>
+          <div className="name">{user?.name ?? 'Bajaj General Insurance'}</div>
         </div>
 
         <nav className="nav">
@@ -116,7 +116,7 @@ export default function DashboardLayout() {
         <div className="sidebar-footer">
           <div className="api-status">
             <div className="status-dot"></div>
-            Bajaj API · All systems operational
+            DBS API · All systems operational
           </div>
           <button onClick={logout} className="lookup-btn lookup-btn--danger" style={{ width: '100%', marginTop: 8 }}>
             Logout
