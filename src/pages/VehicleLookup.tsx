@@ -821,11 +821,11 @@ export default function VehicleLookup() {
               <div className="violations-header lookup-history-header">
                 <div>
                   <div className="title">Violation History</div>
-                  <div className="subtitle">{violationCounts?.total ?? selectedViolations.length} violations returned by the backend</div>
+                  {/* <div className="subtitle">{violationCounts?.total ?? selectedViolations.length} violations returned by the backend</div> */}
                 </div>
                 <div className="lookup-history-actions">
                   <div className="window-badge">
-                    Backend window - {windowStart ? formatDate(windowStart) : 'N/A'} to {windowEnd ? formatDate(windowEnd) : 'N/A'}
+                     {windowStart ? formatDate(windowStart) : 'N/A'} to {windowEnd ? formatDate(windowEnd) : 'N/A'}
                   </div>
 	                  <button type="button" className="lookup-export-btn ghost" onClick={exportPdf}>
 	                    Export PDF
