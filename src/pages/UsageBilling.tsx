@@ -141,11 +141,11 @@ export default function UsageBilling() {
           <p className="usage-billing-intro">
             A compact command view for DBS Score usage, service health, and monthly consumption tracking.
           </p>
-          <div className="usage-billing-chip-row">
+          {/* <div className="usage-billing-chip-row">
             <span className="usage-billing-chip">Bajaj Allianz General Insurance</span>
             <span className="usage-billing-chip">DBS Score API</span>
             <span className="usage-billing-chip">OD underwriting</span>
-          </div>
+          </div> */}
         </div>
 
         <div className="usage-billing-hero-panel">
