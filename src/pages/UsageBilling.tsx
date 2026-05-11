@@ -36,12 +36,13 @@ type MetricCard = {
 const lastRefreshed = new Date('2026-05-09T14:32:00+05:30');
 
 const bandRows: BandRow[] = [
-  { label: 'Extreme risk (0-60)', pct: 8, count: 272, color: '#E24B4A' },
-  { label: 'High risk (61-120)', pct: 14, count: 476, color: '#BA7517' },
-  { label: 'Medium risk (121-200)', pct: 27, count: 921, color: '#888780' },
-  { label: 'Low risk (201-260)', pct: 33, count: 1_126, color: '#1D9E75' },
-  { label: 'Clean record (261-300)', pct: 18, count: 614, color: '#0F6E56' }
-];
+  { label: 'SEVERE', pct: 8, count: 272, color: '#E24B4A' },
+  { label: 'HIGH', pct: 14, count: 476, color: '#BA7517' },
+  { label: 'MODERATE', pct: 27, count: 921, color: '#888780' },
+  { label: 'LOW', pct: 33, count: 1_126, color: '#1D9E75' },
+  { label: 'EXCELLENT', pct: 12, count: 410, color: '#0F6E56' },
+  { label: 'EXEMPLARY', pct: 6, count: 204, color: '#064E3B' }
+];  
 
 const monthDays: DayRow[] = [
   { date: '01 May', total: 3_812, successful: 3_779, failed: 33, failRate: 0.9 },
@@ -131,6 +132,24 @@ export default function UsageBilling() {
     ));
 
   const metricCards = metricCardsForTab(activeTab);
+  const renderRiskMixPanel = (title: string, subtitle: string, total: number, badge: string) => (
+    <div className="card usage-billing-panel usage-billing-panel--accent">
+      <div className="usage-billing-panel-header">
+        <div>
+          <div className="card-title">{title}</div>
+          <div className="usage-billing-panel-subtitle">{subtitle}</div>
+        </div>
+        <span className="usage-billing-mini-badge">{badge}</span>
+      </div>
+      <div className="usage-billing-band-list">{renderBandRows(total)}</div>
+      {activeTab === 'today' ? (
+        <div className="usage-billing-callout">
+          Clean and low-risk vehicles make up the largest share of today's activity, with the strongest concentration
+          in the low-risk band.
+        </div>
+      ) : null}
+    </div>
+  );
 
   return (
     <div className="usage-billing-shell">
@@ -202,19 +221,7 @@ export default function UsageBilling() {
       {activeTab === 'today' && (
         <div className="usage-billing-layout">
           <div className="usage-billing-main-col">
-            <div className="card usage-billing-panel usage-billing-panel--accent">
-              <div className="usage-billing-panel-header">
-                <div>
-                  <div className="card-title">Risk mix</div>
-                  <div className="usage-billing-panel-subtitle">Today's vehicle mix, weighted by score band</div>
-                </div>
-                <span className="usage-billing-mini-badge">Primary focus</span>
-              </div>
-              <div className="usage-billing-band-list">{renderBandRows(3_201)}</div>
-              <div className="usage-billing-callout">
-                Clean and low-risk vehicles make up the largest share of today's activity, with the strongest concentration in the low-risk band.
-              </div>
-            </div>
+            {renderRiskMixPanel("Risk mix", "Today's vehicle mix, weighted by score band", 3_201, 'Primary focus')}
           </div>
 
           <aside className="usage-billing-side-col">
@@ -265,9 +272,10 @@ export default function UsageBilling() {
       {activeTab === 'month' && (
         <div className="usage-billing-layout">
           <div className="usage-billing-main-col">
+            {renderRiskMixPanel('Risk mix', 'This month so far, weighted by score band', 38_712, 'Pinned here')}
             <div className="card usage-billing-panel">
-                <div className="usage-billing-panel-header">
-                  <div>
+              <div className="usage-billing-panel-header">
+                <div>
                   <div className="card-title">Day-wise breakdown</div>
                   <div className="usage-billing-panel-subtitle">May 2026 traffic so far and failure profile</div>
                 </div>
@@ -294,40 +302,6 @@ export default function UsageBilling() {
                 </tbody>
               </table>
             </div>
-
-              {/* <div className="usage-billing-card-grid">
-              <div className="card usage-billing-panel usage-billing-panel--accent">
-                <div className="usage-billing-panel-header">
-                  <div>
-                    <div className="card-title">Month summary</div>
-                    <div className="usage-billing-panel-subtitle">Operational totals and usage health</div>
-                  </div>
-                </div>
-                <div className="usage-billing-status-list">
-                  <div className="usage-billing-status-item">
-                    <span className="usage-billing-status-dot success" />
-                    <div className="usage-billing-status-copy">
-                      <strong>41,880 total calls</strong>
-                      <span>Traffic so far this month</span>
-                    </div>
-                  </div>
-                  <div className="usage-billing-status-item">
-                    <span className="usage-billing-status-dot neutral" />
-                    <div className="usage-billing-status-copy">
-                      <strong>9 active days</strong>
-                      <span>Daily coverage in the current month</span>
-                    </div>
-                  </div>
-                  <div className="usage-billing-status-item">
-                    <span className="usage-billing-status-dot danger" />
-                    <div className="usage-billing-status-copy">
-                      <strong>376 failed calls</strong>
-                      <span>Failure rate remains below 1%</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div> */}
           </div>
 
           <aside className="usage-billing-side-col">
@@ -350,11 +324,12 @@ export default function UsageBilling() {
       {activeTab === 'history' && (
         <div className="usage-billing-layout">
           <div className="usage-billing-main-col">
-              <div className="card usage-billing-panel">
-                <div className="usage-billing-panel-header">
-                  <div>
+            {renderRiskMixPanel('Risk mix', '12-month score distribution from the full yearly sample', 391_200, 'Pinned here')}
+            <div className="card usage-billing-panel">
+              <div className="usage-billing-panel-header">
+                <div>
                   <div className="card-title">Month-wise summary</div>
-                  <div className="usage-billing-panel-subtitle">Rolling 12-month view for usage, failure rate, and consumption control</div>
+                  <div className="usage-billing-panel-subtitle">Rolling 12-month view for usage and failure rate trends</div>
                 </div>
                 <span className="usage-billing-mini-badge">12M history</span>
               </div>
@@ -416,16 +391,6 @@ export default function UsageBilling() {
                 <div className="usage-billing-callout">
                   The year-over-year pattern stays stable with low failure rates and a narrow consumption variance band.
                 </div>
-              </div>
-
-              <div className="card usage-billing-panel usage-billing-panel--accent">
-                <div className="usage-billing-panel-header">
-                  <div>
-                    <div className="card-title">Risk mix over 12 months</div>
-                    <div className="usage-billing-panel-subtitle">Score distribution from the full yearly sample</div>
-                  </div>
-                </div>
-                <div className="usage-billing-band-list">{renderBandRows(391_200)}</div>
               </div>
             </div>
           </div>
