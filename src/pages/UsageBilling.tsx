@@ -308,13 +308,42 @@ export default function UsageBilling() {
             <div className="card usage-billing-panel usage-billing-panel--tall">
               <div className="usage-billing-panel-header">
                 <div>
-                  <div className="card-title">DBS score distribution</div>
-                  <div className="usage-billing-panel-subtitle">Vehicles queried this month</div>
+                  <div className="card-title">Service health</div>
+                  <div className="usage-billing-panel-subtitle">Service quality and reliability signals</div>
                 </div>
               </div>
-              <div className="usage-billing-band-list">{renderBandRows(38_712)}</div>
-              <div className="usage-billing-callout">
-                Low and clean-record vehicles continue to make up the majority of the month-to-date sample.
+              <div className="usage-billing-status-list">
+                <div className="usage-billing-status-item">
+                  <span className="usage-billing-status-dot success" />
+                  <div className="usage-billing-status-copy">
+                    <strong>3,389 successful calls</strong>
+                    <span>99.3% success rate</span>
+                  </div>
+                </div>
+                <div className="usage-billing-status-item">
+                  <span className="usage-billing-status-dot warning" />
+                  <div className="usage-billing-status-copy">
+                    <strong>23 failed calls</strong>
+                    <span>Transient upstream service errors</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="usage-billing-divider" />
+
+              <div className="usage-billing-legend">
+                <div className="usage-billing-legend-item">
+                  <span className="usage-billing-legend-swatch" style={{ background: '#005dac' }} />
+                  <span>Peak load</span>
+                </div>
+                <div className="usage-billing-legend-item">
+                  <span className="usage-billing-legend-swatch" style={{ background: '#0b8666' }} />
+                  <span>Healthy output</span>
+                </div>
+                <div className="usage-billing-legend-item">
+                  <span className="usage-billing-legend-swatch" style={{ background: '#d29b00' }} />
+                  <span>Review queue</span>
+                </div>
               </div>
             </div>
           </aside>
