@@ -172,7 +172,8 @@ export default function UsageBilling() {
     activeTab === 'today' ? data?.today : activeTab === 'month' ? data?.current_month : data?.last_12_months;
   const metricCards = tabData ? buildMetricCards(activeTab, tabData) : [];
   const bandRows = tabData ? buildBandRows(tabData.risk_category_distribution) : [];
-  const historyRows = data ? buildHistoryRows(data.last_12_months.monthly_request_counts) : [];
+  const monthRows = data ? [...data.current_month.daily_request_counts].sort((a, b) => b.period_start.localeCompare(a.period_start)) : [];
+  const historyRows = data ? buildHistoryRows([...data.last_12_months.monthly_request_counts].sort((a, b) => b.period_start.localeCompare(a.period_start))) : [];
   const historyStats = buildSummaryStats(historyRows);
   const currentMonthSuccessRate = data ? getSuccessRate(data.total_calls_this_month, data.total_calls_this_month - data.total_failed_requests_this_month) : 0;
   const activeTabSuccessRate = tabData ? getSuccessRate(tabData.total_requests, tabData.successful_requests) : 0;
@@ -351,8 +352,8 @@ export default function UsageBilling() {
                   </tr>
                 </thead>
                 <tbody>
-                  {data?.current_month.daily_request_counts.length ? (
-                    data.current_month.daily_request_counts.map((row) => (
+                  {monthRows.length ? (
+                    monthRows.map((row) => (
                       <tr key={row.period_start}>
                         <td>{formatDayLabel(row.period_start)}</td>
                         <td style={{ textAlign: 'right', fontFamily: 'var(--font-mono)' }}>{formatCount(row.total_requests)}</td>
