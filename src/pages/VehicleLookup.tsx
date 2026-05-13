@@ -1,17 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { useRecentVehicles } from '../hooks/useRecentVehicles';
 import { useScoreLookup } from '../hooks/useScoreLookup';
 import { ScoreResult } from '../types/score';
 import { scoreColor } from '../utils/scoreColor';
-
-const RECENT_QUERIES_STORAGE_KEY = 'dbs_bajaj_recent_vehicle_queries';
-const RECENT_QUERIES_TTL_MS = 24 * 60 * 60 * 1000;
-
-type RecentQuery = {
-  regNo: string;
-  band: string;
-  savedAt: number;
-};
 
 function formatBandLabel(value: string) {
   return value
@@ -72,12 +64,12 @@ export default function VehicleLookup() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [regInput, setRegInput] = useState('');
   const [queryReg, setQueryReg] = useState('');
-  const [recentQueries, setRecentQueries] = useState<RecentQuery[]>([]);
   const regNoFromUrl = searchParams.get('regNo')?.toUpperCase().replace(/[^A-Z0-9]/g, '') ?? '';
   const includeRc = searchParams.get('include_rc') === 'true';
 
   const formattedReg = normalizeVehicleNumber(regInput);
   const result = useScoreLookup(queryReg, includeRc);
+  const recentVehicles = useRecentVehicles();
   const selected = result.data as ScoreResult | undefined;
 
   const bandClass = (label: string) =>
@@ -420,35 +412,6 @@ export default function VehicleLookup() {
   }, [queryReg, regNoFromUrl]);
 
   useEffect(() => {
-    try {
-      const raw =
-        localStorage.getItem(RECENT_QUERIES_STORAGE_KEY) ??
-        localStorage.getItem('dbs_recent_vehicle_queries');
-      if (!raw) return;
-
-      const parsed = JSON.parse(raw) as RecentQuery[];
-      const nowTs = Date.now();
-      const valid = parsed.filter(
-        (item) =>
-          item &&
-          typeof item.regNo === 'string' &&
-          typeof item.band === 'string' &&
-          typeof item.savedAt === 'number' &&
-          nowTs - item.savedAt < RECENT_QUERIES_TTL_MS
-      );
-
-      setRecentQueries(valid);
-      if (valid.length !== parsed.length) {
-        localStorage.setItem(RECENT_QUERIES_STORAGE_KEY, JSON.stringify(valid));
-      } else if (!localStorage.getItem(RECENT_QUERIES_STORAGE_KEY)) {
-        localStorage.setItem(RECENT_QUERIES_STORAGE_KEY, JSON.stringify(valid));
-      }
-    } catch {
-      localStorage.removeItem(RECENT_QUERIES_STORAGE_KEY);
-    }
-  }, []);
-
-  useEffect(() => {
     if (!selected) {
       setAnimatedArcOffset(arcLength);
       return;
@@ -461,24 +424,6 @@ export default function VehicleLookup() {
 
     return () => window.cancelAnimationFrame(frame);
   }, [arcLength, arcOffset, selected?.regNo]);
-
-  useEffect(() => {
-    if (!selected) return;
-
-    setRecentQueries((prev) => {
-      const next = [
-        {
-          regNo: selected.regNo,
-          band: selected.band.replace(/_/g, ' '),
-          savedAt: Date.now()
-        },
-        ...prev.filter((item) => item.regNo !== selected.regNo)
-      ].slice(0, 10);
-
-      localStorage.setItem(RECENT_QUERIES_STORAGE_KEY, JSON.stringify(next));
-      return next;
-    });
-  }, [selected]);
 
   return (
     <div className="lookup-page">
@@ -560,19 +505,27 @@ export default function VehicleLookup() {
                 Recent Queries
               </div>
               <div className="recent-queries-scroll">
-                {recentQueries.length ? (
-                  recentQueries.map((item) => (
-                    <div key={item.regNo} className="recent-item" onClick={() => onRecentQuery(item.regNo)}>
-                      <span className="recent-reg">{item.regNo.replace(/(\w{2})(\d{2})(\w{2})(\d+)/, '$1 $2 $3 $4')}</span>
+                {recentVehicles.isLoading ? (
+                  <div className="api-key-empty" style={{ marginTop: 0 }}>
+                    Loading recent queries...
+                  </div>
+                ) : recentVehicles.error ? (
+                  <div className="api-key-empty" style={{ marginTop: 0 }}>
+                    {recentVehicles.error.message}
+                  </div>
+                ) : recentVehicles.data?.length ? (
+                  recentVehicles.data.map((item) => (
+                    <div key={`${item.vehicle_number}-${item.queried_at}`} className="recent-item" onClick={() => onRecentQuery(item.vehicle_number)}>
+                      <span className="recent-reg">{formatVehicleNumber(item.vehicle_number)}</span>
                       <span
-                        className={bandClass(item.band)}
+                        className={bandClass(item.risk_category)}
                         style={{
-                          background: `${scoreColor(item.band)}18`,
-                          border: `1px solid ${scoreColor(item.band)}33`,
-                          color: scoreColor(item.band)
+                          background: `${scoreColor(item.risk_category)}18`,
+                          border: `1px solid ${scoreColor(item.risk_category)}33`,
+                          color: scoreColor(item.risk_category)
                         }}
                       >
-                        {item.band}
+                        {formatBandLabel(item.risk_category)}
                       </span>
                     </div>
                   ))
