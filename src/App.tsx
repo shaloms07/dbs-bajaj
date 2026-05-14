@@ -6,6 +6,7 @@ import DashboardLayout from './pages/DashboardLayout';
 import VehicleLookup from './pages/VehicleLookup';
 import PortfolioAnalytics from './pages/PortfolioAnalytics';
 import BatchProcessing from './pages/BatchProcessing';
+import UsageBilling from './pages/UsageBilling';
 import APIConsole from './pages/APIConsole';
 
 function ProtectedRoute({ children }: { children: ReactElement }) {
@@ -33,6 +34,7 @@ export default function App() {
           <Route path="lookup" element={<VehicleLookup />} />
           <Route path="portfolio" element={<PortfolioAnalytics />} />
           <Route path="batch" element={<BatchProcessing />} />
+          <Route path="usage-billing" element={<UsageBilling />} />
           <Route path="api" element={<APIConsole />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
