@@ -498,7 +498,7 @@ export default function VehicleLookup() {
           <div className="lookup-insight-item">
             <strong>Run a registration lookup</strong>
             <span>
-              Enter a vehicle number above to pull the latest DBS score and
+              Enter a vehicle number below to pull the latest DBS score and
               violation history.
             </span>
           </div>
