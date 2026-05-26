@@ -1,56 +1,58 @@
-import { useEffect, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import { useRecentVehicles } from '../hooks/useRecentVehicles';
-import { useScoreLookup } from '../hooks/useScoreLookup';
-import { ScoreResult } from '../types/score';
-import { scoreColor } from '../utils/scoreColor';
+import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
+import { useScoreLookup } from "../hooks/useScoreLookup";
+import { ScoreResult } from "../types/score";
+import { scoreColor } from "../utils/scoreColor";
 
 function formatBandLabel(value: string) {
   return value
-    .replace(/_/g, ' ')
+    .replace(/_/g, " ")
     .toLowerCase()
     .replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
 function formatDateTime(value?: string) {
   return value
-    ? new Date(`${value}Z`).toLocaleString('en-IN', {
-        timeZone: 'Asia/Kolkata',
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
+    ? new Date(`${value}Z`).toLocaleString("en-IN", {
+        timeZone: "Asia/Kolkata",
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
       })
-    : 'N/A';
+    : "N/A";
 }
 
 function formatDate(value?: string) {
   return value
-    ? new Date(`${value}Z`).toLocaleDateString('en-IN', {
-        timeZone: 'Asia/Kolkata',
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric'
+    ? new Date(`${value}Z`).toLocaleDateString("en-IN", {
+        timeZone: "Asia/Kolkata",
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
       })
-    : 'N/A';
+    : "N/A";
 }
 
 function escapeHtml(value: string) {
   return value
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#39;');
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
 }
 
 function sanitizeFileName(value: string) {
-  return value.replace(/[^a-z0-9]+/gi, '_').replace(/^_+|_+$/g, '').toLowerCase();
+  return value
+    .replace(/[^a-z0-9]+/gi, "_")
+    .replace(/^_+|_+$/g, "")
+    .toLowerCase();
 }
 
 function normalizeVehicleNumber(value: string) {
-  return value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+  return value.toUpperCase().replace(/[^A-Z0-9]/g, "");
 }
 
 function formatVehicleNumber(value: string) {
@@ -62,18 +64,24 @@ function formatVehicleNumber(value: string) {
 
 export default function VehicleLookup() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const [regInput, setRegInput] = useState('');
-  const [queryReg, setQueryReg] = useState('');
-  const regNoFromUrl = searchParams.get('regNo')?.toUpperCase().replace(/[^A-Z0-9]/g, '') ?? '';
-  const includeRc = searchParams.get('include_rc') === 'true';
+  const [regInput, setRegInput] = useState("");
+  const [queryReg, setQueryReg] = useState("");
+  const regNoFromUrl =
+    searchParams
+      .get("regNo")
+      ?.toUpperCase()
+      .replace(/[^A-Z0-9]/g, "") ?? "";
+  const includeRc = searchParams.get("include_rc") === "true";
 
   const formattedReg = normalizeVehicleNumber(regInput);
   const result = useScoreLookup(queryReg, includeRc);
-  const recentVehicles = useRecentVehicles();
   const selected = result.data as ScoreResult | undefined;
 
   const bandClass = (label: string) =>
-    `recent-band band-${label.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')}`;
+    `recent-band band-${label
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/(^-|-$)/g, "")}`;
 
   const onQuery = () => {
     setQueryReg(formattedReg);
@@ -83,14 +91,17 @@ export default function VehicleLookup() {
   const onRecentQuery = (reg: string) => {
     setRegInput(formatVehicleNumber(reg));
     setQueryReg(normalizeVehicleNumber(reg));
-    setSearchParams({ regNo: normalizeVehicleNumber(reg), include_rc: String(includeRc) });
+    setSearchParams({
+      regNo: normalizeVehicleNumber(reg),
+      include_rc: String(includeRc),
+    });
   };
 
   const setVehicleView = (nextIncludeRc: boolean) => {
     const nextParams = new URLSearchParams(searchParams);
-    nextParams.set('include_rc', String(nextIncludeRc));
+    nextParams.set("include_rc", String(nextIncludeRc));
     if (queryReg) {
-      nextParams.set('regNo', queryReg);
+      nextParams.set("regNo", queryReg);
     }
     setSearchParams(nextParams);
   };
@@ -98,7 +109,10 @@ export default function VehicleLookup() {
   const displayScore = selected ? Math.round(selected.score) : 0;
   const needleRotation = selected ? (displayScore / 300) * 180 - 90 : -90;
   const arcLength = 267;
-  const visualArcScore = Math.min(Math.max(selected ? displayScore : 0, 0), 300);
+  const visualArcScore = Math.min(
+    Math.max(selected ? displayScore : 0, 0),
+    300,
+  );
   const arcProgress = visualArcScore / 300;
   const arcOffset = arcLength * (1 - arcProgress);
   const [animatedArcOffset, setAnimatedArcOffset] = useState(arcLength);
@@ -107,71 +121,96 @@ export default function VehicleLookup() {
   const lastViolationAt = selected?.lastViolationDatetime ?? null;
   const windowStart = selected?.windowStart;
   const windowEnd = selected?.windowEnd;
-  const latestBandLabel = selected ? formatBandLabel(selected.band) : 'Ready';
-  const gaugeColor = selected ? scoreColor(selected.band) : '#16a34a';
-  const activeGaugeStroke = selected?.band === 'EXTREME_RISK' ? gaugeColor : 'url(#arcGradActive)';
+  const latestBandLabel = selected ? formatBandLabel(selected.band) : "Ready";
+  const gaugeColor = selected ? scoreColor(selected.band) : "#16a34a";
+  const activeGaugeStroke =
+    selected?.band === "EXTREME_RISK" ? gaugeColor : "url(#arcGradActive)";
+  const activeWindowLabel =
+    windowStart && windowEnd
+      ? `${formatDate(windowStart)} to ${formatDate(windowEnd)}`
+      : "36-month backend window";
 
   const currentVehicleSummary = selected
     ? [
-        ['Registration No.', selected.regNo || formattedReg || 'N/A'],
-        ['Score', String(displayScore)],
-        ['Band', formatBandLabel(selected.band)],
-        ['Premium Modifier', `${selected.premiumModifierPct ?? 0}%`],
-        ['Violations', String(violationCounts?.total ?? selectedViolations.length)],
-        ['Window Start', selected.windowStart ? formatDate(selected.windowStart) : 'N/A'],
-        ['Window End', selected.windowEnd ? formatDate(selected.windowEnd) : 'N/A'],
-        ['Last Violation', selected.lastViolationDatetime ? formatDateTime(selected.lastViolationDatetime) : 'None'],
+        ["Registration No.", selected.regNo || formattedReg || "N/A"],
+        ["Score", String(displayScore)],
+        ["Band", formatBandLabel(selected.band)],
+        ["Premium Modifier", `${selected.premiumModifierPct ?? 0}%`],
+        [
+          "Violations",
+          String(violationCounts?.total ?? selectedViolations.length),
+        ],
+        [
+          "Window Start",
+          selected.windowStart ? formatDate(selected.windowStart) : "N/A",
+        ],
+        [
+          "Window End",
+          selected.windowEnd ? formatDate(selected.windowEnd) : "N/A",
+        ],
+        [
+          "Last Violation",
+          selected.lastViolationDatetime
+            ? formatDateTime(selected.lastViolationDatetime)
+            : "None",
+        ],
         ...(includeRc
           ? [
-              ['Owner Name', selected.ownerName || 'N/A'],
-              ['Vehicle Type', selected.vehicleType || 'Vehicle'],
-              ['Fuel Type', selected.fuelType || 'N/A'],
-              ['Engine CC', selected.cc ? `${selected.cc}cc` : 'N/A']
+              ["Owner Name", selected.ownerName || "N/A"],
+              ["Vehicle Type", selected.vehicleType || "Vehicle"],
+              ["Fuel Type", selected.fuelType || "N/A"],
+              ["Engine CC", selected.cc ? `${selected.cc}cc` : "N/A"],
             ]
           : []),
-        ['Queried At', formatDateTime(selected.queriedAt)],
-        ['Fresh As Of', formatDate(selected.freshAsOf)]
+        ["Queried At", formatDateTime(selected.queriedAt)],
+        ["Fresh As Of", formatDate(selected.freshAsOf)],
       ]
     : [];
 
   const exportTableRows = selected
     ? selectedViolations.map((violation) => [
-        new Date(violation.date).toLocaleDateString('en-IN'),
-        violation.challanDetails || violation.type || 'N/A',
-        [violation.categoryName, violation.categoryDescription].filter(Boolean).join(' - ') || violation.categoryCode || 'N/A',
-        `-${violation.impact} pts`
+        new Date(violation.date).toLocaleDateString("en-IN"),
+        violation.challanDetails || violation.type || "N/A",
+        [violation.categoryName, violation.categoryDescription]
+          .filter(Boolean)
+          .join(" - ") ||
+          violation.categoryCode ||
+          "N/A",
+        `-${violation.impact} pts`,
       ])
     : [];
 
   const exportCsv = () => {
     if (!selected) return;
 
-      const summaryRows = [
-        ['Vehicle Lookup Summary'],
-	        ['Field', 'Value'],
-	        ...currentVehicleSummary,
-	        [],
-	        ['Violation History'],
-	        ['Date', 'Violation Details', 'Category', 'Impact'],
-        ...exportTableRows
-      ];
+    const summaryRows = [
+      ["Vehicle Lookup Summary"],
+      ["Field", "Value"],
+      ...currentVehicleSummary,
+      [],
+      ["Violation History"],
+      ["Date", "Violation Details", "Category", "Impact"],
+      ...exportTableRows,
+    ];
 
     const csv = summaryRows
       .map((row) =>
         row
           .map((cell) => {
-            const value = cell == null ? '' : String(cell);
+            const value = cell == null ? "" : String(cell);
             return `"${value.replaceAll('"', '""')}"`;
           })
-          .join(',')
+          .join(","),
       )
-      .join('\n');
+      .join("\n");
 
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
+    const link = document.createElement("a");
     link.href = url;
-    link.download = `dbs_bajaj_${sanitizeFileName(selected.regNo || formattedReg || 'vehicle')}_lookup.csv`;
+    link.download = `dbs_bajaj_${sanitizeFileName(
+      selected.regNo || formattedReg || "vehicle",
+    )}_lookup.csv`;
     link.click();
     URL.revokeObjectURL(url);
   };
@@ -188,9 +227,9 @@ export default function VehicleLookup() {
             <td>${escapeHtml(row[2])}</td>
             <td>${escapeHtml(row[3])}</td>
           </tr>
-        `
+        `,
       )
-      .join('');
+      .join("");
 
     const summaryHtml = currentVehicleSummary
       .map(
@@ -199,9 +238,9 @@ export default function VehicleLookup() {
             <span>${escapeHtml(label)}</span>
             <strong>${escapeHtml(value)}</strong>
           </div>
-        `
+        `,
       )
-      .join('');
+      .join("");
 
     const html = `
       <!doctype html>
@@ -349,23 +388,39 @@ export default function VehicleLookup() {
             <div class="report-header">
               <div>
                 <p class="report-eyebrow">DBS-Bajaj vehicle lookup report</p>
-                <h1 class="report-title">${escapeHtml(selected.regNo || formattedReg || 'Vehicle')}</h1>
+                <h1 class="report-title">${escapeHtml(
+                  selected.regNo || formattedReg || "Vehicle",
+                )}</h1>
                 <div class="report-meta">
-                  Score: <strong>${displayScore}</strong> · Band: <strong>${escapeHtml(formatBandLabel(selected.band))}</strong><br />
-                  Queried: ${escapeHtml(formatDateTime(selected.queriedAt))}<br />
+                  Score: <strong>${displayScore}</strong> · Band: <strong>${escapeHtml(
+      formatBandLabel(selected.band),
+    )}</strong><br />
+                  Queried: ${escapeHtml(
+                    formatDateTime(selected.queriedAt),
+                  )}<br />
                   Fresh as of: ${escapeHtml(formatDate(selected.freshAsOf))}
                 </div>
               </div>
-              <div class="report-band">${escapeHtml(formatBandLabel(selected.band))}</div>
+              <div class="report-band">${escapeHtml(
+                formatBandLabel(selected.band),
+              )}</div>
             </div>
 
             <div class="report-grid">${summaryHtml}</div>
 
             <div class="report-section-title">Violation Summary</div>
             <div class="summary-strip">
-              <div><span>Violations</span><strong>${violationCounts?.total ?? selectedViolations.length}</strong></div>
-              <div><span>Last violation</span><strong>${selected.lastViolationDatetime ? formatDate(selected.lastViolationDatetime) : 'None'}</strong></div>
-              <div><span>Window</span><strong>${selected.windowStart ? formatDate(selected.windowStart) : 'N/A'}</strong></div>
+              <div><span>Violations</span><strong>${
+                violationCounts?.total ?? selectedViolations.length
+              }</strong></div>
+              <div><span>Last violation</span><strong>${
+                selected.lastViolationDatetime
+                  ? formatDate(selected.lastViolationDatetime)
+                  : "None"
+              }</strong></div>
+              <div><span>Window</span><strong>${
+                selected.windowStart ? formatDate(selected.windowStart) : "N/A"
+              }</strong></div>
             </div>
 
             <div class="report-section-title">Violation History</div>
@@ -379,7 +434,10 @@ export default function VehicleLookup() {
                 </tr>
               </thead>
               <tbody>
-                ${rowsHtml || '<tr><td colspan="4" class="muted">No violations found in the 36-month window</td></tr>'}
+                ${
+                  rowsHtml ||
+                  '<tr><td colspan="4" class="muted">No violations found in the 36-month window</td></tr>'
+                }
               </tbody>
             </table>
           </div>
@@ -387,7 +445,7 @@ export default function VehicleLookup() {
       </html>
     `;
 
-    const reportWindow = window.open('', '_blank', 'width=1100,height=900');
+    const reportWindow = window.open("", "_blank", "width=1100,height=900");
     if (!reportWindow) return;
 
     reportWindow.document.open();
@@ -427,33 +485,48 @@ export default function VehicleLookup() {
 
   return (
     <div className="lookup-page">
-      {/* <section className="lookup-hero card">
+      <section className="lookup-hero card">
         <div className="lookup-hero-copy">
-          <p className="lookup-eyebrow">Underwriting lookup</p>
           <h1>Vehicle score and violation history in one view</h1>
-          <p>Search a registration number to review the current score, risk band, and recent violations without clutter.</p>
+          {/* <p className="lookup-eyebrow">Underwriting lookup</p> */}
+          <p>
+            Search a registration number to review the current score, risk band,
+            and recent violations without clutter.
+          </p>
         </div>
-        <div className="lookup-hero-metrics">
-          <div className="lookup-metric">
-            <span>Scoring window</span>
-            <strong>36 months</strong>
+        <div className="lookup-insight-list">
+          <div className="lookup-insight-item">
+            <strong>Run a registration lookup</strong>
+            <span>
+              Enter a vehicle number below to pull the latest DBS score and
+              violation history.
+            </span>
           </div>
-          <div className="lookup-metric">
-            <span>Saved lookups</span>
-            <strong>{recentQueries.length}</strong>
+          <div className="lookup-insight-item">
+            <strong>Use RC mode when needed</strong>
+            <span>
+              Turn it on when you want owner, fuel type, and engine details
+              alongside the score.
+            </span>
           </div>
-          <div className="lookup-metric">
-            <span>Latest band</span>
-            <strong>{latestBandLabel}</strong>
+          <div className="lookup-insight-item">
+            <strong>Export after review</strong>
+            <span>
+              Once a vehicle loads, the report actions become available in the
+              results area.
+            </span>
           </div>
         </div>
-      </section> */}
+      </section>
 
       <div className="lookup-layout">
         <aside className="lookup-sidebar-panel">
           <div className="card lookup-sidebar-card lookup-search-card">
             <div className="card-title">Vehicle Registration Lookup</div>
-            <p className="lookup-search-copy">Enter a registration number and run the score against the live underwriting feed.</p>
+            <p className="lookup-search-copy">
+              Enter a registration number and run the score against the live
+              underwriting feed.
+            </p>
 
             <form
               className="lookup-input-group"
@@ -461,9 +534,9 @@ export default function VehicleLookup() {
                 e.preventDefault();
                 onQuery();
               }}
-              >
-                <div>
-                  <div className="field-label">Registration Number</div>
+            >
+              <div>
+                <div className="field-label">Registration Number</div>
                 <input
                   className="reg-input"
                   value={regInput}
@@ -472,7 +545,14 @@ export default function VehicleLookup() {
                 />
               </div>
               <button type="submit" className="lookup-btn">
-                <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                <svg
+                  width="14"
+                  height="14"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                  viewBox="0 0 24 24"
+                >
                   <circle cx="11" cy="11" r="8" />
                   <path d="m21 21-4.35-4.35" />
                 </svg>
@@ -483,14 +563,14 @@ export default function VehicleLookup() {
             <div className="lookup-switch-row">
               <div className="lookup-switch-copy">
                 <span className="lookup-switch-label">View RC details</span>
-                <strong>{includeRc ? 'On' : 'Off'}</strong>
+                <strong>{includeRc ? "On" : "Off"}</strong>
               </div>
               <button
                 type="button"
                 role="switch"
                 aria-checked={includeRc}
-                aria-label={`RC details ${includeRc ? 'on' : 'off'}`}
-                className={`lookup-switch ${includeRc ? 'on' : ''}`}
+                aria-label={`RC details ${includeRc ? "on" : "off"}`}
+                className={`lookup-switch ${includeRc ? "on" : ""}`}
                 onClick={() => setVehicleView(!includeRc)}
               >
                 <span className="lookup-switch-track">
@@ -499,8 +579,9 @@ export default function VehicleLookup() {
                 {/* <span className="lookup-switch-state">{includeRc ? 'Turn on' : 'Turn off'}</span> */}
               </button>
             </div>
-
-            <div className="recent-queries">
+          </div>
+        </aside>
+        {/* <div className="recent-queries">
               <div className="card-title" style={{ marginBottom: 10 }}>
                 Recent Queries
               </div>
@@ -535,17 +616,19 @@ export default function VehicleLookup() {
                   </div>
                 )}
               </div>
-            </div>
-          </div>
-        </aside>
+            </div> */}
+        {/* PLEASE WRITE </div> HERE TO SHOW THE RECENT QUERIES PANEL IF NEEDED, CURRENTLY COMMENTED OUT TO FOCUS ON MAIN FUNCTIONALITY */}
 
-        <main className="lookup-results-stack">
+        <main className="lookup-score-slot">
           {!queryReg && (
             <div className="lookup-empty-card card">
               <div className="lookup-empty-icon">01</div>
               <div className="lookup-empty-copy">
                 <h2>Search to load a score</h2>
-                <p>Once you run a lookup, we’ll show the gauge, current band, and the last 36 months of violations here.</p>
+                <p>
+                  Once you run a lookup, we’ll show the gauge, current band, and
+                  the last 36 months of violations here.
+                </p>
               </div>
               <div className="lookup-empty-steps">
                 <div>
@@ -565,72 +648,43 @@ export default function VehicleLookup() {
           )}
 
           {queryReg && result.isLoading && (
-            <>
-              <section className="lookup-score-card lookup-skeleton-card">
-                <div className="lookup-score-head">
-                  <div className="lookup-skeleton-stack">
-                    <div className="skeleton skeleton-line skeleton-line-lg" />
+            <section className="lookup-score-card lookup-skeleton-card">
+              <div className="lookup-score-head">
+                <div className="lookup-skeleton-stack">
+                  <div className="skeleton skeleton-line skeleton-line-lg" />
+                  <div className="skeleton skeleton-line skeleton-line-sm" />
+                </div>
+                <div className="skeleton skeleton-pill" />
+              </div>
+
+              <div className="lookup-score-body">
+                <div className="gauge-container">
+                  <div className="skeleton skeleton-gauge" />
+                  <div className="gauge-score-label">
+                    <div className="skeleton skeleton-number" />
+                    <div className="skeleton skeleton-band" />
+                  </div>
+                </div>
+
+                <div className="lookup-score-highlights">
+                  <div className="lookup-highlight skeleton-highlight">
                     <div className="skeleton skeleton-line skeleton-line-sm" />
+                    <div className="skeleton skeleton-value" />
+                    <div className="skeleton skeleton-line skeleton-line-xs" />
                   </div>
-                  <div className="skeleton skeleton-pill" />
-                </div>
-
-                <div className="lookup-score-body">
-                  <div className="gauge-container">
-                    <div className="skeleton skeleton-gauge" />
-                    <div className="gauge-score-label">
-                      <div className="skeleton skeleton-number" />
-                      <div className="skeleton skeleton-band" />
-                    </div>
-                  </div>
-
-                  <div className="lookup-score-highlights">
-                    <div className="lookup-highlight skeleton-highlight">
-                      <div className="skeleton skeleton-line skeleton-line-sm" />
-                      <div className="skeleton skeleton-value" />
-                      <div className="skeleton skeleton-line skeleton-line-xs" />
-                    </div>
-                    <div className="lookup-highlight skeleton-highlight">
-                      <div className="skeleton skeleton-line skeleton-line-sm" />
-                      <div className="skeleton skeleton-value" />
-                      <div className="skeleton skeleton-line skeleton-line-xs" />
-                    </div>
-                    <div className="lookup-highlight skeleton-highlight">
-                      <div className="skeleton skeleton-line skeleton-line-sm" />
-                      <div className="skeleton skeleton-value" />
-                      <div className="skeleton skeleton-line skeleton-line-xs" />
-                    </div>
-                  </div>
-                </div>
-              </section>
-
-              <section className="violations-card lookup-history-card lookup-skeleton-card">
-                <div className="violations-header lookup-history-header">
-                  <div className="lookup-skeleton-stack">
-                    <div className="skeleton skeleton-line skeleton-line-md" />
+                  <div className="lookup-highlight skeleton-highlight">
                     <div className="skeleton skeleton-line skeleton-line-sm" />
+                    <div className="skeleton skeleton-value" />
+                    <div className="skeleton skeleton-line skeleton-line-xs" />
                   </div>
-                  <div className="lookup-history-actions">
-                    <div className="skeleton skeleton-pill skeleton-pill-sm" />
-                    <div className="skeleton skeleton-pill skeleton-pill-sm" />
-                    <div className="skeleton skeleton-pill skeleton-pill-sm" />
-                  </div>
-                </div>
-
-                <div className="lookup-table-wrap">
-                  <div className="lookup-skeleton-table">
-                    {Array.from({ length: 5 }).map((_, idx) => (
-                      <div key={idx} className="lookup-skeleton-row">
-                        <div className="skeleton skeleton-cell skeleton-cell-date" />
-                        <div className="skeleton skeleton-cell skeleton-cell-main" />
-                        <div className="skeleton skeleton-cell skeleton-cell-category" />
-                        <div className="skeleton skeleton-cell skeleton-cell-impact" />
-                      </div>
-                    ))}
+                  <div className="lookup-highlight skeleton-highlight">
+                    <div className="skeleton skeleton-line skeleton-line-sm" />
+                    <div className="skeleton skeleton-value" />
+                    <div className="skeleton skeleton-line skeleton-line-xs" />
                   </div>
                 </div>
-              </section>
-            </>
+              </div>
+            </section>
           )}
 
           {queryReg && result.isError && !result.isLoading && (
@@ -638,7 +692,10 @@ export default function VehicleLookup() {
               <div className="lookup-empty-icon">!</div>
               <div className="lookup-empty-copy">
                 <h2>Lookup failed</h2>
-                <p style={{ color: '#dc2626' }}>{result.error?.message || 'Vehicle not found or lookup failed'}</p>
+                <p style={{ color: "#dc2626" }}>
+                  {result.error?.message ||
+                    "Vehicle not found or lookup failed"}
+                </p>
               </div>
             </div>
           )}
@@ -647,9 +704,12 @@ export default function VehicleLookup() {
             <section className="lookup-score-card">
               <div className="lookup-score-head">
                 <div>
-                  <div className="lookup-reg">{selected.regNo || formattedReg || 'UP32 AB 1234'}</div>
+                  <div className="lookup-reg">
+                    {selected.regNo || formattedReg || "UP32 AB 1234"}
+                  </div>
                   <div className="lookup-sub">
-                    Queried: {formatDateTime(selected.queriedAt)} · Fresh as of {formatDate(selected.freshAsOf)}
+                    Queried: {formatDateTime(selected.queriedAt)} · Fresh as of{" "}
+                    {formatDate(selected.freshAsOf)}
                   </div>
                 </div>
                 <div
@@ -657,7 +717,7 @@ export default function VehicleLookup() {
                   style={{
                     background: `${gaugeColor}1A`,
                     borderColor: `${gaugeColor}40`,
-                    color: gaugeColor
+                    color: gaugeColor,
                   }}
                 >
                   {formatBandLabel(selected.band)}
@@ -668,29 +728,121 @@ export default function VehicleLookup() {
                 <div className="gauge-container">
                   <svg viewBox="0 0 200 110">
                     <defs>
-                      <linearGradient id="arcGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-                        <stop offset="0%" stopColor="#7f1d1d" stopOpacity="0.35" />
-                        <stop offset="20%" stopColor="#991b1b" stopOpacity="0.35" />
-                        <stop offset="30%" stopColor="#b91c1c" stopOpacity="0.35" />
-                        <stop offset="40%" stopColor="#dc2626" stopOpacity="0.35" />
-                        <stop offset="50%" stopColor="#ef4444" stopOpacity="0.35" />
-                        <stop offset="60%" stopColor="#f97316" stopOpacity="0.35" />
-                        <stop offset="70%" stopColor="#eab308" stopOpacity="0.35" />
-                        <stop offset="80%" stopColor="#22c55e" stopOpacity="0.35" />
-                        <stop offset="90%" stopColor="#16a34a" stopOpacity="0.35" />
-                        <stop offset="100%" stopColor="#059669" stopOpacity="0.35" />
+                      <linearGradient
+                        id="arcGrad"
+                        x1="0%"
+                        y1="0%"
+                        x2="100%"
+                        y2="0%"
+                      >
+                        <stop
+                          offset="0%"
+                          stopColor="#7f1d1d"
+                          stopOpacity="0.35"
+                        />
+                        <stop
+                          offset="20%"
+                          stopColor="#991b1b"
+                          stopOpacity="0.35"
+                        />
+                        <stop
+                          offset="30%"
+                          stopColor="#b91c1c"
+                          stopOpacity="0.35"
+                        />
+                        <stop
+                          offset="40%"
+                          stopColor="#dc2626"
+                          stopOpacity="0.35"
+                        />
+                        <stop
+                          offset="50%"
+                          stopColor="#ef4444"
+                          stopOpacity="0.35"
+                        />
+                        <stop
+                          offset="60%"
+                          stopColor="#f97316"
+                          stopOpacity="0.35"
+                        />
+                        <stop
+                          offset="70%"
+                          stopColor="#eab308"
+                          stopOpacity="0.35"
+                        />
+                        <stop
+                          offset="80%"
+                          stopColor="#22c55e"
+                          stopOpacity="0.35"
+                        />
+                        <stop
+                          offset="90%"
+                          stopColor="#16a34a"
+                          stopOpacity="0.35"
+                        />
+                        <stop
+                          offset="100%"
+                          stopColor="#059669"
+                          stopOpacity="0.35"
+                        />
                       </linearGradient>
-                      <linearGradient id="arcGradActive" x1="0%" y1="0%" x2="100%" y2="0%">
-                        <stop offset="0%" stopColor="#7f1d1d" stopOpacity="0.9" />
-                        <stop offset="20%" stopColor="#991b1b" stopOpacity="0.9" />
-                        <stop offset="30%" stopColor="#b91c1c" stopOpacity="0.9" />
-                        <stop offset="40%" stopColor="#dc2626" stopOpacity="0.9" />
-                        <stop offset="50%" stopColor="#ef4444" stopOpacity="0.9" />
-                        <stop offset="60%" stopColor="#f97316" stopOpacity="0.9" />
-                        <stop offset="70%" stopColor="#eab308" stopOpacity="0.9" />
-                        <stop offset="80%" stopColor="#22c55e" stopOpacity="0.9" />
-                        <stop offset="90%" stopColor="#16a34a" stopOpacity="0.9" />
-                        <stop offset="100%" stopColor="#059669" stopOpacity="0.9" />
+                      <linearGradient
+                        id="arcGradActive"
+                        x1="0%"
+                        y1="0%"
+                        x2="100%"
+                        y2="0%"
+                      >
+                        <stop
+                          offset="0%"
+                          stopColor="#7f1d1d"
+                          stopOpacity="0.9"
+                        />
+                        <stop
+                          offset="20%"
+                          stopColor="#991b1b"
+                          stopOpacity="0.9"
+                        />
+                        <stop
+                          offset="30%"
+                          stopColor="#b91c1c"
+                          stopOpacity="0.9"
+                        />
+                        <stop
+                          offset="40%"
+                          stopColor="#dc2626"
+                          stopOpacity="0.9"
+                        />
+                        <stop
+                          offset="50%"
+                          stopColor="#ef4444"
+                          stopOpacity="0.9"
+                        />
+                        <stop
+                          offset="60%"
+                          stopColor="#f97316"
+                          stopOpacity="0.9"
+                        />
+                        <stop
+                          offset="70%"
+                          stopColor="#eab308"
+                          stopOpacity="0.9"
+                        />
+                        <stop
+                          offset="80%"
+                          stopColor="#22c55e"
+                          stopOpacity="0.9"
+                        />
+                        <stop
+                          offset="90%"
+                          stopColor="#16a34a"
+                          stopOpacity="0.9"
+                        />
+                        <stop
+                          offset="100%"
+                          stopColor="#059669"
+                          stopOpacity="0.9"
+                        />
                       </linearGradient>
                     </defs>
                     <path
@@ -709,16 +861,30 @@ export default function VehicleLookup() {
                       strokeLinecap="round"
                       strokeDasharray={arcLength}
                       strokeDashoffset={animatedArcOffset}
-                      style={{ transition: 'stroke-dashoffset 1.2s ease' }}
+                      style={{ transition: "stroke-dashoffset 1.2s ease" }}
                     />
-                    <g id="needle-group" transform={`rotate(${needleRotation} 100 100)`}>
-                      <line x1="100" y1="100" x2="100" y2="28" stroke="white" strokeWidth="2.5" strokeLinecap="round" />
+                    <g
+                      id="needle-group"
+                      transform={`rotate(${needleRotation} 100 100)`}
+                    >
+                      <line
+                        x1="100"
+                        y1="100"
+                        x2="100"
+                        y2="28"
+                        stroke="white"
+                        strokeWidth="2.5"
+                        strokeLinecap="round"
+                      />
                       <circle cx="100" cy="100" r="5" fill="white" />
                       <circle cx="100" cy="100" r="2.5" fill="var(--bg)" />
                     </g>
                   </svg>
                   <div className="gauge-score-label">
-                    <span className="gauge-number" style={{ color: gaugeColor }}>
+                    <span
+                      className="gauge-number"
+                      style={{ color: gaugeColor }}
+                    >
                       {displayScore}
                     </span>
                     <span className="gauge-band" style={{ color: gaugeColor }}>
@@ -733,16 +899,32 @@ export default function VehicleLookup() {
                     <strong>{displayScore}</strong>
                     <small>out of 300</small>
                   </div>
-	                  <div className="lookup-highlight">
-	                    <span className="lookup-highlight-label">Violations</span>
-	                    <strong>{violationCounts?.total ?? selectedViolations.length}</strong>
-	                    <small>{windowStart && windowEnd ? `${formatDate(windowStart)} to ${formatDate(windowEnd)}` : 'Backend window'}</small>
-	                  </div>
-	                  <div className="lookup-highlight">
-	                    <span className="lookup-highlight-label">Last violation</span>
-	                    <strong>{lastViolationAt ? formatDateTime(lastViolationAt) : 'None'}</strong>
-	                    <small>{lastViolationAt ? 'From backend' : 'Clean in window'}</small>
-	                  </div>
+                  <div className="lookup-highlight">
+                    <span className="lookup-highlight-label">Violations</span>
+                    <strong>
+                      {violationCounts?.total ?? selectedViolations.length}
+                    </strong>
+                    <small>
+                      {windowStart && windowEnd
+                        ? `${formatDate(windowStart)} to ${formatDate(
+                            windowEnd,
+                          )}`
+                        : "Backend window"}
+                    </small>
+                  </div>
+                  <div className="lookup-highlight">
+                    <span className="lookup-highlight-label">
+                      Last violation
+                    </span>
+                    <strong>
+                      {lastViolationAt
+                        ? formatDateTime(lastViolationAt)
+                        : "None"}
+                    </strong>
+                    <small>
+                      {lastViolationAt ? "From backend" : "Clean in window"}
+                    </small>
+                  </div>
                 </div>
               </div>
 
@@ -750,87 +932,150 @@ export default function VehicleLookup() {
                 <div className="lookup-rc-grid">
                   <div className="lookup-rc-card">
                     <span>Owner Name</span>
-                    <strong>{selected.ownerName || 'N/A'}</strong>
+                    <strong>{selected.ownerName || "N/A"}</strong>
                   </div>
                   <div className="lookup-rc-card">
                     <span>Vehicle Type</span>
-                    <strong>{selected.vehicleType || 'Vehicle'}</strong>
+                    <strong>{selected.vehicleType || "Vehicle"}</strong>
                   </div>
                   <div className="lookup-rc-card">
                     <span>Fuel Type</span>
-                    <strong>{selected.fuelType || 'N/A'}</strong>
+                    <strong>{selected.fuelType || "N/A"}</strong>
                   </div>
                   <div className="lookup-rc-card">
                     <span>Engine CC</span>
-                    <strong>{selected.cc ? `${selected.cc}cc` : 'N/A'}</strong>
+                    <strong>{selected.cc ? `${selected.cc}cc` : "N/A"}</strong>
                   </div>
                 </div>
               )}
             </section>
           )}
-
-          {selected && !result.isLoading && (
-            <section className="violations-card lookup-history-card">
-              <div className="violations-header lookup-history-header">
-                <div>
-                  <div className="title">Violation History</div>
-                  {/* <div className="subtitle">{violationCounts?.total ?? selectedViolations.length} violations returned by the backend</div> */}
-                </div>
-                <div className="lookup-history-actions">
-                  <div className="window-badge">
-                     {windowStart ? formatDate(windowStart) : 'N/A'} to {windowEnd ? formatDate(windowEnd) : 'N/A'}
-                  </div>
-	                  <button type="button" className="lookup-export-btn ghost" onClick={exportPdf}>
-	                    Export PDF
-	                  </button>
-	                  <button type="button" className="lookup-export-btn" onClick={exportCsv}>
-	                    Export CSV
-                  </button>
-                </div>
-              </div>
-
-	              <div className="lookup-table-wrap">
-	                <table className="lookup-history-table">
-                  <thead>
-                    <tr>
-                      <th>Date</th>
-                      <th>Violation</th>
-                      <th>Category</th>
-                      <th>Impact</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-	                    {selectedViolations.length === 0 && (
-	                      <tr>
-	                        <td colSpan={4} style={{ textAlign: 'center', color: 'var(--text3)', fontSize: 11, padding: '18px 20px' }}>
-                          No violations found in the 36-month window
-	                        </td>
-	                      </tr>
-	                    )}
-	                    {selectedViolations.map((violation, idx) => {
-	                      const categoryLabel = [violation.categoryName, violation.categoryDescription].filter(Boolean).join(' - ');
-	                      const impactClass =
-	                        violation.thz === 'H' ? 'lookup-history-impact high' : violation.thz === 'M' ? 'lookup-history-impact medium' : 'lookup-history-impact low';
-
-                      return (
-                        <tr key={`${violation.type}-${violation.date}-${idx}`}>
-                          <td className="lookup-history-date">{new Date(violation.date).toLocaleDateString('en-IN')}</td>
-                          <td>
-                            <div className="lookup-violation-main">{violation.challanDetails || violation.type}</div>
-                            <div className="lookup-violation-sub">{violation.type}</div>
-                          </td>
-                          <td className="lookup-history-category">{categoryLabel || violation.categoryCode || 'N/A'}</td>
-                          <td className={impactClass}>-{violation.impact} pts</td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </section>
-          )}
         </main>
       </div>
+
+      {queryReg && result.isLoading && (
+        <section className="violations-card lookup-history-card lookup-skeleton-card">
+          <div className="violations-header lookup-history-header">
+            <div className="lookup-skeleton-stack">
+              <div className="skeleton skeleton-line skeleton-line-md" />
+              <div className="skeleton skeleton-line skeleton-line-sm" />
+            </div>
+            <div className="lookup-history-actions">
+              <div className="skeleton skeleton-pill skeleton-pill-sm" />
+              <div className="skeleton skeleton-pill skeleton-pill-sm" />
+              <div className="skeleton skeleton-pill skeleton-pill-sm" />
+            </div>
+          </div>
+
+          <div className="lookup-table-wrap">
+            <div className="lookup-skeleton-table">
+              {Array.from({ length: 5 }).map((_, idx) => (
+                <div key={idx} className="lookup-skeleton-row">
+                  <div className="skeleton skeleton-cell skeleton-cell-date" />
+                  <div className="skeleton skeleton-cell skeleton-cell-main" />
+                  <div className="skeleton skeleton-cell skeleton-cell-category" />
+                  <div className="skeleton skeleton-cell skeleton-cell-impact" />
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {selected && !result.isLoading && (
+        <section className="violations-card lookup-history-card">
+          <div className="violations-header lookup-history-header">
+            <div>
+              <div className="title">Violation History</div>
+              {/* <div className="subtitle">{violationCounts?.total ?? selectedViolations.length} violations returned by the backend</div> */}
+            </div>
+            <div className="lookup-history-actions">
+              <div className="window-badge">
+                {windowStart ? formatDate(windowStart) : "N/A"} to{" "}
+                {windowEnd ? formatDate(windowEnd) : "N/A"}
+              </div>
+              <button
+                type="button"
+                className="lookup-export-btn ghost"
+                onClick={exportPdf}
+              >
+                Export PDF
+              </button>
+              <button
+                type="button"
+                className="lookup-export-btn"
+                onClick={exportCsv}
+              >
+                Export CSV
+              </button>
+            </div>
+          </div>
+
+          <div className="lookup-table-wrap">
+            <table className="lookup-history-table">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Violation</th>
+                  <th>Category</th>
+                  <th>Impact</th>
+                </tr>
+              </thead>
+              <tbody>
+                {selectedViolations.length === 0 && (
+                  <tr>
+                    <td
+                      colSpan={4}
+                      style={{
+                        textAlign: "center",
+                        color: "var(--text3)",
+                        fontSize: 11,
+                        padding: "18px 20px",
+                      }}
+                    >
+                      No violations found in the 36-month window
+                    </td>
+                  </tr>
+                )}
+                {selectedViolations.map((violation, idx) => {
+                  const categoryLabel = [
+                    violation.categoryName,
+                    violation.categoryDescription,
+                  ]
+                    .filter(Boolean)
+                    .join(" - ");
+                  const impactClass =
+                    violation.thz === "H"
+                      ? "lookup-history-impact high"
+                      : violation.thz === "M"
+                      ? "lookup-history-impact medium"
+                      : "lookup-history-impact low";
+
+                  return (
+                    <tr key={`${violation.type}-${violation.date}-${idx}`}>
+                      <td className="lookup-history-date">
+                        {new Date(violation.date).toLocaleDateString("en-IN")}
+                      </td>
+                      <td>
+                        <div className="lookup-violation-main">
+                          {violation.challanDetails || violation.type}
+                        </div>
+                        <div className="lookup-violation-sub">
+                          {violation.type}
+                        </div>
+                      </td>
+                      <td className="lookup-history-category">
+                        {categoryLabel || violation.categoryCode || "N/A"}
+                      </td>
+                      <td className={impactClass}>-{violation.impact} pts</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
     </div>
   );
 }
