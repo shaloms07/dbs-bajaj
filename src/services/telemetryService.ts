@@ -718,7 +718,45 @@ function buildTripsFromIgnitionSessions(sessions: IgnitionSession[], distanceTri
   });
 }
 
-function buildDistanceTrend(trips: TelemetryTripSegment[]) {
+function getRangeDays(filter: TelemetryFilter) {
+  const start = new Date(filter.startDateTime);
+  const end = new Date(filter.endDateTime);
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return 1;
+  const diffMs = Math.max(end.getTime() - start.getTime(), 0);
+  return diffMs / (24 * 60 * 60 * 1000);
+}
+
+function formatTrendDate(dateValue: string) {
+  return new Date(dateValue).toLocaleDateString('en-IN', {
+    day: '2-digit',
+    month: 'short',
+    timeZone: 'Asia/Kolkata'
+  });
+}
+
+function formatTrendTime(dateValue: string) {
+  return new Date(dateValue).toLocaleTimeString('en-IN', {
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZone: 'Asia/Kolkata'
+  });
+}
+
+function buildDistanceTrend(trips: TelemetryTripSegment[], aggregateByDay: boolean) {
+  if (aggregateByDay) {
+    const grouped = new Map<string, number>();
+
+    trips.forEach((trip) => {
+      const key = trip.startTime ? new Date(trip.startTime).toISOString().slice(0, 10) : `Trip ${grouped.size + 1}`;
+      grouped.set(key, Number(((grouped.get(key) ?? 0) + trip.distanceKm).toFixed(2)));
+    });
+
+    return Array.from(grouped.entries()).map(([dayKey, dayDistanceKm]) => ({
+      label: dayKey.includes('-') ? formatTrendDate(`${dayKey}T00:00:00`) : dayKey,
+      distanceKm: Number(dayDistanceKm.toFixed(2))
+    }));
+  }
+
   let cumulativeDistanceKm = 0;
 
   return trips.map((trip, index) => {
@@ -726,26 +764,33 @@ function buildDistanceTrend(trips: TelemetryTripSegment[]) {
     const distanceKm = trip.cumulativeDistanceKm || Number(cumulativeDistanceKm.toFixed(2));
     return {
       label: trip.startTime
-        ? new Date(trip.startTime).toLocaleTimeString('en-IN', {
-            hour: '2-digit',
-            minute: '2-digit',
-            timeZone: 'Asia/Kolkata'
-          })
+        ? formatTrendTime(trip.startTime)
         : `Trip ${index + 1}`,
       distanceKm: Number(distanceKm.toFixed(2))
     };
   });
 }
 
-function buildSpeedTrend(logs: TelemetrySpeedLog[]) {
+function buildSpeedTrend(logs: TelemetrySpeedLog[], aggregateByDay: boolean) {
+  if (aggregateByDay) {
+    const grouped = new Map<string, { totalSpeed: number; count: number }>();
+
+    logs.forEach((log) => {
+      const key = log.timestamp ? new Date(log.timestamp).toISOString().slice(0, 10) : `Log ${grouped.size + 1}`;
+      const current = grouped.get(key) ?? { totalSpeed: 0, count: 0 };
+      current.totalSpeed += log.speed;
+      current.count += 1;
+      grouped.set(key, current);
+    });
+
+    return Array.from(grouped.entries()).map(([dayKey, value]) => ({
+      label: dayKey.includes('-') ? formatTrendDate(`${dayKey}T00:00:00`) : dayKey,
+      speed: Number((value.totalSpeed / Math.max(value.count, 1)).toFixed(1))
+    }));
+  }
+
   return logs.map((log, index) => ({
-    label: log.timestamp
-      ? new Date(log.timestamp).toLocaleTimeString('en-IN', {
-          hour: '2-digit',
-          minute: '2-digit',
-          timeZone: 'Asia/Kolkata'
-        })
-      : `Log ${index + 1}`,
+    label: log.timestamp ? formatTrendTime(log.timestamp) : `Log ${index + 1}`,
     speed: log.speed
   }));
 }
@@ -993,6 +1038,7 @@ export async function fetchVehicleTelemetry(filter: TelemetryFilter): Promise<Ve
   const overSpeedSummary = normalizeRow(overSpeedResponse?.aaData?.[0]) as SpeedSummaryRow;
   const distanceSummary = normalizeRow(distanceResponse?.aaData?.[0]) as DistanceSummaryRow;
   const ignitionSummary = normalizeRow(ignitionResponse?.aaData?.[0]) as IgnitionSummaryRow;
+  const aggregateTrendByDay = getRangeDays(filter) > 3;
   const overspeedLimit = toNumber(overSpeedSummary.overspeedLimit, toNumber(speedSummary.overspeedLimit, 60));
   const speedRows = buildSpeedLogs(Array.isArray(speedSummary.overSpeedData) ? speedSummary.overSpeedData : [], overspeedLimit);
   const overSpeedRows = buildSpeedLogs(Array.isArray(overSpeedSummary.overSpeedData) ? overSpeedSummary.overSpeedData : [], overspeedLimit);
@@ -1025,8 +1071,8 @@ export async function fetchVehicleTelemetry(filter: TelemetryFilter): Promise<Ve
   const effectiveDuration = Math.max(totalDrivingDurationMinutes, dayMinutes + nightMinutes, 1);
   const dayDrivingPct = Number(((dayMinutes / effectiveDuration) * 100).toFixed(1));
   const nightDrivingPct = Number(((nightMinutes / effectiveDuration) * 100).toFixed(1));
-  const speedTrend = buildSpeedTrend(speedRows);
-  const distanceTrend = buildDistanceTrend(distanceTripSegments.length ? distanceTripSegments : tripSegments);
+  const speedTrend = buildSpeedTrend(speedRows, aggregateTrendByDay);
+  const distanceTrend = buildDistanceTrend(distanceTripSegments.length ? distanceTripSegments : tripSegments, aggregateTrendByDay);
   const activityTimeline = buildActivityTimeline(tripSegments);
   const speedEvents = buildSpeedEvents(overSpeedRows.length ? overSpeedRows : speedRows);
   const behaviorIndicators = buildBehaviorIndicators(totalDistanceKm, tripSegments.length, maxSpeed, overspeedCount);

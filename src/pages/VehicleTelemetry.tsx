@@ -383,7 +383,7 @@ export default function VehicleTelemetry() {
               <div className="telemetry-panel-head">
                 <div>
                   <div className="card-title">Speed Trend</div>
-                  <div className="telemetry-panel-subtitle">Chronological Speed values from Speed Report overSpeedData</div>
+                  <div className="telemetry-panel-subtitle">Time-wise for short ranges, daily average speed for longer ranges</div>
                 </div>
               </div>
               <div className="telemetry-chart-wrap">
@@ -402,7 +402,7 @@ export default function VehicleTelemetry() {
               <div className="telemetry-panel-head">
                 <div>
                   <div className="card-title">Distance Trend</div>
-                  <div className="telemetry-panel-subtitle">CumulativeDistance from Distance Report objTravelReport</div>
+                  <div className="telemetry-panel-subtitle">Trip-wise for short ranges, daily distance driven for longer ranges</div>
                 </div>
               </div>
               <div className="telemetry-chart-wrap">
