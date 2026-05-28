@@ -520,7 +520,6 @@ function TelemetryDashboardContent({
 export default function VehicleTelemetry() {
   const vehicles = useMemo(() => getTelemetryVehicles(), []);
   const defaultFilter = useMemo(() => getDefaultTelemetryFilter(), []);
-  const oneYearWindow = useMemo(() => getOneYearWindow(), []);
   const [activeTab, setActiveTab] = useState<TelemetryTab>('all_time');
   const [preset, setPreset] = useState<DatePreset>('yesterday');
   const [draftFilter, setDraftFilter] = useState<TelemetryFilter>(defaultFilter);
@@ -576,11 +575,6 @@ export default function VehicleTelemetry() {
 
     if (nextFilter.startDateTime > nextFilter.endDateTime) {
       setRangeError('Start date must be earlier than or equal to end date.');
-      return;
-    }
-
-    if (nextFilter.startDateTime < oneYearWindow.minDateTime || nextFilter.endDateTime > oneYearWindow.maxDateTime) {
-      setRangeError('Filtered View supports only the last 1 year of data.');
       return;
     }
 
@@ -659,8 +653,6 @@ export default function VehicleTelemetry() {
                       <input
                         type="datetime-local"
                         step="1"
-                        min={oneYearWindow.minDateTime}
-                        max={oneYearWindow.maxDateTime}
                         value={draftFilter.startDateTime}
                         onChange={(event) => setDraftFilter((current) => ({ ...current, startDateTime: event.target.value }))}
                       />
@@ -670,8 +662,6 @@ export default function VehicleTelemetry() {
                       <input
                         type="datetime-local"
                         step="1"
-                        min={oneYearWindow.minDateTime}
-                        max={oneYearWindow.maxDateTime}
                         value={draftFilter.endDateTime}
                         onChange={(event) => setDraftFilter((current) => ({ ...current, endDateTime: event.target.value }))}
                       />
