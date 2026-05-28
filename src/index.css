@@ -3736,6 +3736,16 @@ tbody td {
   max-width: 100%;
 }
 
+.telemetry-table-actions {
+  display: flex;
+  justify-content: center;
+  margin-top: 16px;
+}
+
+.telemetry-show-more-btn {
+  min-width: 140px;
+}
+
 .telemetry-table td,
 .telemetry-table th {
   white-space: normal;

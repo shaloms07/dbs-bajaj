@@ -1,4 +1,4 @@
-import { FormEvent, useMemo, useState } from 'react';
+import { FormEvent, useEffect, useMemo, useState } from 'react';
 import {
   Area,
   AreaChart,
@@ -128,19 +128,41 @@ function indicatorTone(value: TelemetryBehaviorIndicator['tone']) {
 }
 
 function summaryCards(data: VehicleTelemetryData) {
+  const averageTripDivisor = Math.max(data.totalTrips, 1);
+
   return [
     { label: 'Total Distance Travelled', value: formatKm(data.totalDistanceKm), note: 'From Distance Report TotalDistance' },
-    { label: 'Total Driving Duration', value: formatMinutes(data.totalDrivingDurationMinutes), note: `${data.totalTrips} ignition sessions` },
+    {
+      label: 'Total Driving Duration',
+      value: formatMinutes(data.totalDrivingDurationMinutes),
+      note: `${data.totalTrips} ignition sessions - Avg/trip ${formatMinutes(data.totalDrivingDurationMinutes / averageTripDivisor)}`
+    },
     { label: 'Max Speed', value: `${Math.round(data.maxSpeed)} km/h`, note: 'From OverSpeed Report maxSpeed' },
     {
       label: 'Overspeed Count',
       value: data.overspeedCount.toLocaleString('en-IN'),
       note: `From OverSpeed Report overspeedCount; limit ${data.overspeedLimit} km/h`
     },
-    { label: 'Day Driving', value: formatKm(data.dayDrivingKm), note: `${formatPercent(data.dayDrivingPct)} - ${formatMinutes(data.dayDrivingMinutes)}` },
-    { label: 'Night Driving', value: formatKm(data.nightDrivingKm), note: `${formatPercent(data.nightDrivingPct)} - ${formatMinutes(data.nightDrivingMinutes)}` },
-    { label: 'Urban Driving', value: formatKm(data.urbanDrivingKm), note: `${formatPercent(data.urbanDrivingPct)} placeholder` },
-    { label: 'Rural Driving', value: formatKm(data.ruralDrivingKm), note: `${formatPercent(data.ruralDrivingPct)} placeholder` }
+    {
+      label: 'Day Driving',
+      value: formatKm(data.dayDrivingKm),
+      note: `${formatPercent(data.dayDrivingPct)} - ${formatMinutes(data.dayDrivingMinutes)} - Avg/trip ${formatKm(data.dayDrivingKm / averageTripDivisor)}`
+    },
+    {
+      label: 'Night Driving',
+      value: formatKm(data.nightDrivingKm),
+      note: `${formatPercent(data.nightDrivingPct)} - ${formatMinutes(data.nightDrivingMinutes)} - Avg/trip ${formatKm(data.nightDrivingKm / averageTripDivisor)}`
+    },
+    {
+      label: 'Urban Driving',
+      value: formatKm(data.urbanDrivingKm),
+      note: `${formatPercent(data.urbanDrivingPct)} placeholder - Avg/trip ${formatKm(data.urbanDrivingKm / averageTripDivisor)}`
+    },
+    {
+      label: 'Rural Driving',
+      value: formatKm(data.ruralDrivingKm),
+      note: `${formatPercent(data.ruralDrivingPct)} placeholder - Avg/trip ${formatKm(data.ruralDrivingKm / averageTripDivisor)}`
+    }
   ];
 }
 
@@ -191,6 +213,14 @@ function TelemetryDashboardContent({
   dayNightChartData: Array<{ name: string; value: number; color: string }>;
   behaviorIndicators: TelemetryBehaviorIndicator[];
 }) {
+  const [visibleTripCount, setVisibleTripCount] = useState(10);
+
+  useEffect(() => {
+    setVisibleTripCount(10);
+  }, [data.vehicleNumber, data.tripSegments.length]);
+  const visibleTrips = data.tripSegments.slice(0, visibleTripCount);
+  const hasMoreTrips = data.tripSegments.length > visibleTripCount;
+
   return (
     <>
       <section className="telemetry-summary-grid">
@@ -391,7 +421,7 @@ function TelemetryDashboardContent({
             </thead>
             <tbody>
               {data.tripSegments.length ? (
-                data.tripSegments.map((trip, index) => {
+                visibleTrips.map((trip, index) => {
                   const tripTone: TelemetryTone =
                     trip.distanceKm >= 10 || trip.durationMinutes >= 30 ? 'red' : trip.distanceKm >= 4 ? 'yellow' : 'green';
                   return (
@@ -422,6 +452,13 @@ function TelemetryDashboardContent({
             </tbody>
           </table>
         </div>
+        {hasMoreTrips ? (
+          <div className="telemetry-table-actions">
+            <button type="button" className="lookup-btn telemetry-show-more-btn" onClick={() => setVisibleTripCount((count) => count + 10)}>
+              Show more
+            </button>
+          </div>
+        ) : null}
       </section>
 
       <section className="card telemetry-panel">
