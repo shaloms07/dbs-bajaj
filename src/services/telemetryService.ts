@@ -6,11 +6,13 @@ export interface TelemetryVehicleOption {
   label: string;
   vehicleNumber: string;
   bbid: string;
+  customerId: string;
 }
 
 export interface TelemetryFilter {
   vehicleNumber: string;
   bbid: string;
+  customerId: string;
   startDateTime: string;
   endDateTime: string;
 }
@@ -152,9 +154,17 @@ const TELEMETRY_VEHICLES: TelemetryVehicleOption[] = [
   {
     label: 'TEST_VEHICLE',
     vehicleNumber: 'TEST_VEHICLE',
-    bbid: 'J865510083289001'
+    bbid: 'J865510083289001',
+    customerId: '135482'
+  },
+  {
+    label: 'TEST_VEHICLE 135481',
+    vehicleNumber: 'TEST_VEHICLE_135481',
+    bbid: 'I868329087666651',
+    customerId: '135481'
   }
 ];
+
 
 function formatTrackmasterDate(dateValue: string) {
   const normalizedValue = dateValue.length === 10 ? `${dateValue}T00:00:00` : dateValue;
@@ -426,7 +436,7 @@ async function fetchSpeedReport(filter: TelemetryFilter) {
     endDate: formatTrackmasterDate(filter.endDateTime),
     bbid: filter.bbid,
     mode: 'normal',
-    custid: trackmasterCustomerId,
+    custid: filter.customerId || trackmasterCustomerId,
     downloadType: '',
     reportName: '',
     type: '0',
@@ -492,7 +502,7 @@ async function fetchOverSpeedReport(filter: TelemetryFilter) {
     endDate: formatTrackmasterDate(filter.endDateTime),
     bbid: filter.bbid,
     mode: 'over',
-    custid: trackmasterCustomerId,
+    custid: filter.customerId || trackmasterCustomerId,
     downloadType: '',
     reportName: '',
     type: '0',
@@ -532,7 +542,7 @@ async function fetchDistanceReport(filter: TelemetryFilter) {
     beginDate: formatTrackmasterDate(filter.startDateTime),
     endDate: formatTrackmasterDate(filter.endDateTime),
     bbid: filter.bbid,
-    custid: trackmasterCustomerId,
+    custid: filter.customerId || trackmasterCustomerId,
     downloadType: '',
     reportName: 'Distance Report',
     type: '0',
@@ -588,7 +598,7 @@ async function fetchIgnitionReport(filter: TelemetryFilter) {
     bbid: filter.bbid,
     beginDate: formatTrackmasterDate(filter.startDateTime),
     endDate: formatTrackmasterDate(filter.endDateTime),
-    CustId: trackmasterCustomerId,
+    CustId: filter.customerId || trackmasterCustomerId,
     downloadType: '',
     reportName: '',
     _: String(Date.now())
@@ -1022,6 +1032,7 @@ export function getDefaultTelemetryFilter(): TelemetryFilter {
   return {
     vehicleNumber: vehicle.vehicleNumber,
     bbid: vehicle.bbid,
+    customerId: vehicle.customerId,
     startDateTime: `${previousDayValue}T00:00:00`,
     endDateTime: `${previousDayValue}T23:59:59`
   };

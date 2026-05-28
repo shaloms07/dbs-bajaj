@@ -98,9 +98,24 @@ function getPresetRange(preset: Exclude<DatePreset, 'custom'>) {
 }
 
 function getAllTimeRange() {
+  const end = new Date();
+  const start = new Date(end);
+  start.setFullYear(end.getFullYear() - 1);
+  start.setHours(0, 0, 0, 0);
   return {
-    startDateTime: '2000-01-01T00:00:00',
-    endDateTime: toDateTimeLocalValue(new Date())
+    startDateTime: toDateTimeLocalValue(start),
+    endDateTime: toDateTimeLocalValue(end)
+  };
+}
+
+function getOneYearWindow() {
+  const end = new Date();
+  const start = new Date(end);
+  start.setFullYear(end.getFullYear() - 1);
+  start.setHours(0, 0, 0, 0);
+  return {
+    minDateTime: toDateTimeLocalValue(start),
+    maxDateTime: toDateTimeLocalValue(end)
   };
 }
 
@@ -468,6 +483,7 @@ function TelemetryDashboardContent({
 export default function VehicleTelemetry() {
   const vehicles = useMemo(() => getTelemetryVehicles(), []);
   const defaultFilter = useMemo(() => getDefaultTelemetryFilter(), []);
+  const oneYearWindow = useMemo(() => getOneYearWindow(), []);
   const [activeTab, setActiveTab] = useState<TelemetryTab>('all_time');
   const [preset, setPreset] = useState<DatePreset>('yesterday');
   const [draftFilter, setDraftFilter] = useState<TelemetryFilter>(defaultFilter);
@@ -478,9 +494,10 @@ export default function VehicleTelemetry() {
     () => ({
       vehicleNumber: draftFilter.vehicleNumber,
       bbid: draftFilter.bbid,
+      customerId: draftFilter.customerId,
       ...getAllTimeRange()
     }),
-    [draftFilter.vehicleNumber, draftFilter.bbid]
+    [draftFilter.vehicleNumber, draftFilter.bbid, draftFilter.customerId]
   );
   const allTimeTelemetry = useVehicleTelemetry(allTimeFilter);
 
@@ -505,7 +522,8 @@ export default function VehicleTelemetry() {
     setDraftFilter((current) => ({
       ...current,
       vehicleNumber: selectedVehicle.vehicleNumber,
-      bbid: selectedVehicle.bbid
+      bbid: selectedVehicle.bbid,
+      customerId: selectedVehicle.customerId
     }));
   };
 
@@ -521,6 +539,11 @@ export default function VehicleTelemetry() {
 
     if (nextFilter.startDateTime > nextFilter.endDateTime) {
       setRangeError('Start date must be earlier than or equal to end date.');
+      return;
+    }
+
+    if (nextFilter.startDateTime < oneYearWindow.minDateTime || nextFilter.endDateTime > oneYearWindow.maxDateTime) {
+      setRangeError('Filtered View supports only the last 1 year of data.');
       return;
     }
 
@@ -540,7 +563,7 @@ export default function VehicleTelemetry() {
           </p>
           <div className="tabs telemetry-tabs">
             <button type="button" className={`tab ${activeTab === 'all_time' ? 'active' : ''}`} onClick={() => setActiveTab('all_time')}>
-              All Time Data
+              Last 1 Year Data
             </button>
             <button type="button" className={`tab ${activeTab === 'dashboard' ? 'active' : ''}`} onClick={() => setActiveTab('dashboard')}>
               Filtered View
@@ -554,7 +577,7 @@ export default function VehicleTelemetry() {
                 <span>Vehicle</span>
                 <select value={draftFilter.vehicleNumber} onChange={(event) => onVehicleChange(event.target.value)}>
                   {vehicles.map((vehicle) => (
-                    <option key={vehicle.bbid} value={vehicle.vehicleNumber}>
+                    <option key={vehicle.vehicleNumber} value={vehicle.vehicleNumber}>
                       {vehicle.label}
                     </option>
                   ))}
@@ -564,8 +587,8 @@ export default function VehicleTelemetry() {
             <div className="telemetry-filter-actions">
               <div className="telemetry-filter-meta">
                 <span>Range</span>
-                <strong>All available telemetry history</strong>
-                <small>Vehicle-wide rollup using the existing Trackmaster feeds</small>
+                <strong>Rolling last 12 months</strong>
+                <small>Vehicle-wide rollup using the last 1 year from the existing Trackmaster feeds</small>
               </div>
             </div>
           </div>
@@ -586,7 +609,7 @@ export default function VehicleTelemetry() {
                   <span>Vehicle</span>
                   <select value={draftFilter.vehicleNumber} onChange={(event) => onVehicleChange(event.target.value)}>
                     {vehicles.map((vehicle) => (
-                      <option key={vehicle.bbid} value={vehicle.vehicleNumber}>
+                      <option key={vehicle.vehicleNumber} value={vehicle.vehicleNumber}>
                         {vehicle.label}
                       </option>
                     ))}
@@ -599,6 +622,8 @@ export default function VehicleTelemetry() {
                       <input
                         type="datetime-local"
                         step="1"
+                        min={oneYearWindow.minDateTime}
+                        max={oneYearWindow.maxDateTime}
                         value={draftFilter.startDateTime}
                         onChange={(event) => setDraftFilter((current) => ({ ...current, startDateTime: event.target.value }))}
                       />
@@ -608,6 +633,8 @@ export default function VehicleTelemetry() {
                       <input
                         type="datetime-local"
                         step="1"
+                        min={oneYearWindow.minDateTime}
+                        max={oneYearWindow.maxDateTime}
                         value={draftFilter.endDateTime}
                         onChange={(event) => setDraftFilter((current) => ({ ...current, endDateTime: event.target.value }))}
                       />
