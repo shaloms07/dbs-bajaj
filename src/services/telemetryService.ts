@@ -158,11 +158,17 @@ const TELEMETRY_VEHICLES: TelemetryVehicleOption[] = [
     customerId: '135482'
   },
   {
-    label: 'TEST_VEHICLE 135481',
-    vehicleNumber: 'TEST_VEHICLE_135481',
-    bbid: 'I868329087666651',
-    customerId: '135481'
-  }
+    label: 'TEST_VEHICLE 135478',
+    vehicleNumber: 'TEST_VEHICLE_135478',
+    bbid: 'I868329080777299',
+    customerId: '135478'
+  },
+  {
+    label: 'TEST_VEHICLE 135479',
+    vehicleNumber: 'TEST_VEHICLE_135479',
+    bbid: 'I868329087183558',
+    customerId: '135479'
+  },
 ];
 
 
