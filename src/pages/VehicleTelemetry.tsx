@@ -25,6 +25,7 @@ import {
 
 type TelemetryTone = 'green' | 'yellow' | 'red';
 type DatePreset = 'today' | 'yesterday' | 'last_7_days' | 'custom';
+type TelemetryTab = 'all_time' | 'dashboard';
 
 function formatMinutes(totalMinutes: number) {
   const hours = Math.floor(totalMinutes / 60);
@@ -96,6 +97,13 @@ function getPresetRange(preset: Exclude<DatePreset, 'custom'>) {
   return { startDateTime: toDateTimeLocalValue(start), endDateTime: toDateTimeLocalValue(end) };
 }
 
+function getAllTimeRange() {
+  return {
+    startDateTime: '2000-01-01T00:00:00',
+    endDateTime: toDateTimeLocalValue(new Date())
+  };
+}
+
 function toneClass(tone: TelemetryTone) {
   return `telemetry-tone-${tone}`;
 }
@@ -159,14 +167,322 @@ function ExactLocationCell({
   );
 }
 
+function TelemetryDashboardContent({
+  data,
+  dayNightChartData,
+  behaviorIndicators
+}: {
+  data: VehicleTelemetryData;
+  dayNightChartData: Array<{ name: string; value: number; color: string }>;
+  behaviorIndicators: TelemetryBehaviorIndicator[];
+}) {
+  return (
+    <>
+      <section className="telemetry-summary-grid">
+        {summaryCards(data).map((card) => (
+          <div key={card.label} className="card telemetry-summary-card">
+            <div className="telemetry-summary-label">{card.label}</div>
+            <div className="telemetry-summary-value">{card.value}</div>
+            <div className="telemetry-summary-note">{card.note}</div>
+          </div>
+        ))}
+      </section>
+
+      <section className="telemetry-panel-grid">
+        <div className="card telemetry-panel">
+          <div className="telemetry-panel-head">
+            <div>
+              <div className="card-title">Day vs Night Driving</div>
+              <div className="telemetry-panel-subtitle">Computed from trip timestamps using the 6 AM / 6 PM rule</div>
+            </div>
+          </div>
+          <div className="telemetry-chart-two-up">
+            <div className="telemetry-chart-wrap">
+              <ResponsiveContainer width="100%" height={220}>
+                <PieChart>
+                  <Pie data={dayNightChartData} dataKey="value" nameKey="name" innerRadius={58} outerRadius={82} paddingAngle={3}>
+                    {dayNightChartData.map((entry) => (
+                      <Cell key={entry.name} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip content={<TooltipShell />} />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="telemetry-side-metrics">
+              <div className="telemetry-side-metric">
+                <span>Day driving</span>
+                <strong>{formatKm(data.dayDrivingKm)}</strong>
+                <small>{formatPercent(data.dayDrivingPct)} - {formatMinutes(data.dayDrivingMinutes)}</small>
+              </div>
+              <div className="telemetry-side-metric">
+                <span>Night driving</span>
+                <strong>{formatKm(data.nightDrivingKm)}</strong>
+                <small>{formatPercent(data.nightDrivingPct)} - {formatMinutes(data.nightDrivingMinutes)}</small>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="card telemetry-panel">
+          <div className="telemetry-panel-head">
+            <div>
+              <div className="card-title">Driving Mix</div>
+              <div className="telemetry-panel-subtitle">Urban and rural placeholders, ready for future geofencing logic</div>
+            </div>
+          </div>
+          <div className="telemetry-progress-stack">
+            <div className="telemetry-progress-block">
+              <div className="telemetry-progress-row">
+                <span>Urban Driving</span>
+                <strong>{formatKm(data.urbanDrivingKm)} - {formatPercent(data.urbanDrivingPct)}</strong>
+              </div>
+              <div className="telemetry-progress-track">
+                <div className="telemetry-progress-fill telemetry-tone-green" style={{ width: `${data.urbanDrivingPct}%` }} />
+              </div>
+            </div>
+            <div className="telemetry-progress-block">
+              <div className="telemetry-progress-row">
+                <span>Rural Driving</span>
+                <strong>{formatKm(data.ruralDrivingKm)} - {formatPercent(data.ruralDrivingPct)}</strong>
+              </div>
+              <div className="telemetry-progress-track">
+                <div className="telemetry-progress-fill telemetry-tone-yellow" style={{ width: `${data.ruralDrivingPct}%` }} />
+              </div>
+            </div>
+          </div>
+          <div className="telemetry-placeholder-note">
+            Urban/rural segmentation is currently static and designed for future route-based classification.
+          </div>
+        </div>
+      </section>
+
+      <section className="telemetry-panel-grid">
+        <div className="card telemetry-panel">
+          <div className="telemetry-panel-head">
+            <div>
+              <div className="card-title">Speed Trend</div>
+              <div className="telemetry-panel-subtitle">Time-wise for short ranges, daily average speed for longer ranges</div>
+            </div>
+          </div>
+          <div className="telemetry-chart-wrap">
+            <ResponsiveContainer width="100%" height={260}>
+              <LineChart data={data.speedTrend}>
+                <XAxis dataKey="label" tickLine={false} axisLine={false} />
+                <YAxis tickLine={false} axisLine={false} width={42} />
+                <Tooltip content={<TooltipShell />} />
+                <Line type="monotone" dataKey="speed" stroke="#005dac" strokeWidth={3} dot={false} name="Speed (km/h)" />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        <div className="card telemetry-panel">
+          <div className="telemetry-panel-head">
+            <div>
+              <div className="card-title">Distance Trend</div>
+              <div className="telemetry-panel-subtitle">Trip-wise for short ranges, daily distance driven for longer ranges</div>
+            </div>
+          </div>
+          <div className="telemetry-chart-wrap">
+            <ResponsiveContainer width="100%" height={260}>
+              <AreaChart data={data.distanceTrend}>
+                <XAxis dataKey="label" tickLine={false} axisLine={false} />
+                <YAxis tickLine={false} axisLine={false} width={52} />
+                <Tooltip content={<TooltipShell />} />
+                <Area type="monotone" dataKey="distanceKm" stroke="#0b8666" fill="rgba(11, 134, 102, 0.18)" name="Distance (km)" />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      </section>
+
+      <section className="telemetry-panel-grid">
+        <div className="card telemetry-panel">
+          <div className="telemetry-panel-head">
+            <div>
+              <div className="card-title">Driving Behaviour Indicators</div>
+              <div className="telemetry-panel-subtitle">Colour-coded heuristics for movement quality and risk</div>
+            </div>
+          </div>
+          <div className="telemetry-indicator-grid">
+            {behaviorIndicators.map((indicator) => (
+              <div key={indicator.label} className={`telemetry-indicator-card ${toneClass(indicatorTone(indicator.tone))}`}>
+                <div className="telemetry-indicator-head">
+                  <span className={`telemetry-indicator-dot ${toneClass(indicatorTone(indicator.tone))}`} />
+                  <strong>{indicator.label}</strong>
+                </div>
+                <p>{indicator.description}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="card telemetry-panel">
+          <div className="telemetry-panel-head">
+            <div>
+              <div className="card-title">Speed Events Timeline</div>
+              <div className="telemetry-panel-subtitle">Recent high-signal speed events and driving activity timeline</div>
+            </div>
+          </div>
+          <div className="telemetry-events-list">
+            {data.speedEvents.length ? (
+              data.speedEvents.map((event) => (
+                <div key={`${event.label}-${event.details}`} className="telemetry-event-row">
+                  <span className={`telemetry-event-pill ${toneClass(event.tone)}`}>{event.label}</span>
+                  <div className="telemetry-event-copy">{event.details}</div>
+                </div>
+              ))
+            ) : (
+              <div className="telemetry-empty-state">No speed events were returned for this range.</div>
+            )}
+          </div>
+          <div className="telemetry-activity-chart">
+            <ResponsiveContainer width="100%" height={180}>
+              <BarChart data={data.activityTimeline}>
+                <XAxis dataKey="label" tickLine={false} axisLine={false} />
+                <YAxis tickLine={false} axisLine={false} width={42} />
+                <Tooltip content={<TooltipShell />} />
+                <Bar dataKey="durationMinutes" radius={[6, 6, 0, 0]} name="Duration (min)">
+                  {data.activityTimeline.map((entry) => (
+                    <Cell key={entry.label} fill={entry.tone === 'red' ? '#c92a2a' : entry.tone === 'yellow' ? '#d29b00' : '#0b8666'} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      </section>
+
+      <section className="card telemetry-panel">
+        <div className="telemetry-panel-head">
+          <div>
+            <div className="card-title">Ignition Trip Timeline</div>
+            <div className="telemetry-panel-subtitle">Trips are now derived from ignition on/off sessions, with distance added from the distance report</div>
+          </div>
+        </div>
+        <div className="telemetry-table-wrap">
+          <table className="usage-billing-table telemetry-table">
+            <thead>
+              <tr>
+                <th>Trip</th>
+                <th>Ignition On</th>
+                <th>Ignition Off</th>
+                <th>Duration</th>
+                <th>Distance</th>
+                <th>Start Location</th>
+                <th>End Location</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.tripSegments.length ? (
+                data.tripSegments.map((trip, index) => {
+                  const tripTone: TelemetryTone =
+                    trip.distanceKm >= 10 || trip.durationMinutes >= 30 ? 'red' : trip.distanceKm >= 4 ? 'yellow' : 'green';
+                  return (
+                    <tr key={trip.id}>
+                      <td style={{ fontFamily: 'var(--font-mono)' }}>#{index + 1}</td>
+                      <td>{formatDateTime(trip.startTime)}</td>
+                      <td>{formatDateTime(trip.endTime)}</td>
+                      <td style={{ fontFamily: 'var(--font-mono)' }}>{formatMinutes(trip.durationMinutes)}</td>
+                      <td>
+                        <span className={`telemetry-inline-pill ${toneClass(tripTone)}`}>{formatKm(trip.distanceKm)}</span>
+                      </td>
+                      <td>
+                        <ExactLocationCell latitude={trip.startLatitude} longitude={trip.startLongitude} />
+                      </td>
+                      <td>
+                        <ExactLocationCell latitude={trip.endLatitude} longitude={trip.endLongitude} />
+                      </td>
+                    </tr>
+                  );
+                })
+              ) : (
+                <tr>
+                  <td colSpan={7} className="telemetry-empty-table">
+                    No ignition trip sessions were returned for this range.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section className="card telemetry-panel">
+        <div className="telemetry-panel-head">
+          <div>
+            <div className="card-title">Overspeeding Instances</div>
+            <div className="telemetry-panel-subtitle">From OverSpeed Report overSpeedData; duration uses reported overSpeedDuration</div>
+          </div>
+        </div>
+        <div className="telemetry-table-wrap">
+          <table className="usage-billing-table telemetry-table">
+            <thead>
+              <tr>
+                <th>Instance</th>
+                <th>Start Time</th>
+                <th>End Time</th>
+                <th>Duration</th>
+                <th>Peak Speed</th>
+                <th>Start Location</th>
+                <th>End Location</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.overspeedInstances.length ? (
+                data.overspeedInstances.map((instance, index) => (
+                  <tr key={instance.id}>
+                    <td style={{ fontFamily: 'var(--font-mono)' }}>#{index + 1}</td>
+                    <td>{formatDateTime(instance.startTime)}</td>
+                    <td>{formatDateTime(instance.endTime)}</td>
+                    <td style={{ fontFamily: 'var(--font-mono)' }}>{formatMinutes(instance.durationMinutes)}</td>
+                    <td>
+                      <span className={`telemetry-inline-pill ${toneClass(instance.peakSpeed >= 80 ? 'red' : 'yellow')}`}>
+                        {Math.round(instance.peakSpeed)} km/h
+                      </span>
+                    </td>
+                    <td>
+                      <ExactLocationCell latitude={instance.startLatitude} longitude={instance.startLongitude} />
+                    </td>
+                    <td>
+                      <ExactLocationCell latitude={instance.endLatitude} longitude={instance.endLongitude} />
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={7} className="telemetry-empty-table">
+                    No overspeed instances were detected for this range.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </>
+  );
+}
+
 export default function VehicleTelemetry() {
   const vehicles = useMemo(() => getTelemetryVehicles(), []);
   const defaultFilter = useMemo(() => getDefaultTelemetryFilter(), []);
+  const [activeTab, setActiveTab] = useState<TelemetryTab>('all_time');
   const [preset, setPreset] = useState<DatePreset>('yesterday');
   const [draftFilter, setDraftFilter] = useState<TelemetryFilter>(defaultFilter);
   const [appliedFilter, setAppliedFilter] = useState<TelemetryFilter>(defaultFilter);
   const [rangeError, setRangeError] = useState('');
   const telemetry = useVehicleTelemetry(appliedFilter);
+  const allTimeFilter = useMemo(
+    () => ({
+      vehicleNumber: draftFilter.vehicleNumber,
+      bbid: draftFilter.bbid,
+      ...getAllTimeRange()
+    }),
+    [draftFilter.vehicleNumber, draftFilter.bbid]
+  );
+  const allTimeTelemetry = useVehicleTelemetry(allTimeFilter);
 
   const dayNightChartData = telemetry.data
     ? [
@@ -174,8 +490,15 @@ export default function VehicleTelemetry() {
         { name: 'Night km', value: Number(telemetry.data.nightDrivingKm.toFixed(1)), color: '#d29b00' }
       ]
     : [];
+  const allTimeDayNightChartData = allTimeTelemetry.data
+    ? [
+        { name: 'Day km', value: Number(allTimeTelemetry.data.dayDrivingKm.toFixed(1)), color: '#0b8666' },
+        { name: 'Night km', value: Number(allTimeTelemetry.data.nightDrivingKm.toFixed(1)), color: '#d29b00' }
+      ]
+    : [];
 
   const behaviorIndicators = telemetry.data?.behaviorIndicators ?? [];
+  const allTimeBehaviorIndicators = allTimeTelemetry.data?.behaviorIndicators ?? [];
 
   const onVehicleChange = (vehicleNumber: string) => {
     const selectedVehicle = vehicles.find((vehicle) => vehicle.vehicleNumber === vehicleNumber) ?? vehicles[0];
@@ -215,66 +538,99 @@ export default function VehicleTelemetry() {
             Deep-dive speed, distance, trip segmentation, and behaviour analytics for a selected vehicle using the
             existing telemetry feeds.
           </p>
-        </div>
-        <form className="telemetry-filter-bar" onSubmit={applyFilter}>
-          <div className="telemetry-filter-grid">
-            <label className="telemetry-filter-field">
-              <span>Range</span>
-              <select value={preset} onChange={(event) => setPreset(event.target.value as DatePreset)}>
-                <option value="today">Today</option>
-                <option value="yesterday">Yesterday</option>
-                <option value="last_7_days">Last 7 days</option>
-                <option value="custom">Custom range</option>
-              </select>
-            </label>
-            <label className="telemetry-filter-field">
-              <span>Vehicle</span>
-              <select value={draftFilter.vehicleNumber} onChange={(event) => onVehicleChange(event.target.value)}>
-                {vehicles.map((vehicle) => (
-                  <option key={vehicle.bbid} value={vehicle.vehicleNumber}>
-                    {vehicle.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-            {preset === 'custom' ? (
-              <>
-                <label className="telemetry-filter-field">
-                  <span>Start date & time</span>
-                  <input
-                    type="datetime-local"
-                    step="1"
-                    value={draftFilter.startDateTime}
-                    onChange={(event) => setDraftFilter((current) => ({ ...current, startDateTime: event.target.value }))}
-                  />
-                </label>
-                <label className="telemetry-filter-field">
-                  <span>End date & time</span>
-                  <input
-                    type="datetime-local"
-                    step="1"
-                    value={draftFilter.endDateTime}
-                    onChange={(event) => setDraftFilter((current) => ({ ...current, endDateTime: event.target.value }))}
-                  />
-                </label>
-              </>
-            ) : null}
-          </div>
-          <div className="telemetry-filter-actions">
-            <div className="telemetry-filter-meta">
-              <span>Vehicle Number</span>
-              <strong>{draftFilter.vehicleNumber}</strong>
-              {/* <small>BBID {draftFilter.bbid}</small> */}
-            </div>
-            <button type="submit" className="lookup-btn">
-              Apply Range
+          <div className="tabs telemetry-tabs">
+            <button type="button" className={`tab ${activeTab === 'all_time' ? 'active' : ''}`} onClick={() => setActiveTab('all_time')}>
+              All Time Data
+            </button>
+            <button type="button" className={`tab ${activeTab === 'dashboard' ? 'active' : ''}`} onClick={() => setActiveTab('dashboard')}>
+              Filtered View
             </button>
           </div>
-        </form>
-        {rangeError ? <div className="telemetry-error-inline">{rangeError}</div> : null}
+        </div>
+        {activeTab === 'all_time' ? (
+          <div className="telemetry-filter-bar">
+            <div className="telemetry-filter-grid telemetry-filter-grid--single">
+              <label className="telemetry-filter-field">
+                <span>Vehicle</span>
+                <select value={draftFilter.vehicleNumber} onChange={(event) => onVehicleChange(event.target.value)}>
+                  {vehicles.map((vehicle) => (
+                    <option key={vehicle.bbid} value={vehicle.vehicleNumber}>
+                      {vehicle.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+            <div className="telemetry-filter-actions">
+              <div className="telemetry-filter-meta">
+                <span>Range</span>
+                <strong>All available telemetry history</strong>
+                <small>Vehicle-wide rollup using the existing Trackmaster feeds</small>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <>
+            <form className="telemetry-filter-bar" onSubmit={applyFilter}>
+              <div className="telemetry-filter-grid">
+                <label className="telemetry-filter-field">
+                  <span>Range</span>
+                  <select value={preset} onChange={(event) => setPreset(event.target.value as DatePreset)}>
+                    <option value="today">Today</option>
+                    <option value="yesterday">Yesterday</option>
+                    <option value="last_7_days">Last 7 days</option>
+                    <option value="custom">Custom range</option>
+                  </select>
+                </label>
+                <label className="telemetry-filter-field">
+                  <span>Vehicle</span>
+                  <select value={draftFilter.vehicleNumber} onChange={(event) => onVehicleChange(event.target.value)}>
+                    {vehicles.map((vehicle) => (
+                      <option key={vehicle.bbid} value={vehicle.vehicleNumber}>
+                        {vehicle.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                {preset === 'custom' ? (
+                  <>
+                    <label className="telemetry-filter-field">
+                      <span>Start date & time</span>
+                      <input
+                        type="datetime-local"
+                        step="1"
+                        value={draftFilter.startDateTime}
+                        onChange={(event) => setDraftFilter((current) => ({ ...current, startDateTime: event.target.value }))}
+                      />
+                    </label>
+                    <label className="telemetry-filter-field">
+                      <span>End date & time</span>
+                      <input
+                        type="datetime-local"
+                        step="1"
+                        value={draftFilter.endDateTime}
+                        onChange={(event) => setDraftFilter((current) => ({ ...current, endDateTime: event.target.value }))}
+                      />
+                    </label>
+                  </>
+                ) : null}
+              </div>
+              <div className="telemetry-filter-actions">
+                <div className="telemetry-filter-meta">
+                  <span>Vehicle Number</span>
+                  <strong>{draftFilter.vehicleNumber}</strong>
+                </div>
+                <button type="submit" className="lookup-btn">
+                  Apply Range
+                </button>
+              </div>
+            </form>
+            {rangeError ? <div className="telemetry-error-inline">{rangeError}</div> : null}
+          </>
+        )}
       </section>
 
-      {telemetry.isLoading ? (
+      {activeTab === 'all_time' && allTimeTelemetry.isLoading ? (
         <div className="telemetry-loading-grid">
           {Array.from({ length: 8 }).map((_, index) => (
             <div key={index} className="card telemetry-summary-card">
@@ -286,7 +642,30 @@ export default function VehicleTelemetry() {
         </div>
       ) : null}
 
-      {telemetry.error ? (
+      {activeTab === 'dashboard' && telemetry.isLoading ? (
+        <div className="telemetry-loading-grid">
+          {Array.from({ length: 8 }).map((_, index) => (
+            <div key={index} className="card telemetry-summary-card">
+              <div className="skeleton skeleton-line skeleton-line-sm" />
+              <div className="skeleton skeleton-number" style={{ marginTop: 14 }} />
+              <div className="skeleton skeleton-line skeleton-line-xs" style={{ marginTop: 10 }} />
+            </div>
+          ))}
+        </div>
+      ) : null}
+
+      {activeTab === 'all_time' && allTimeTelemetry.error ? (
+        <section className="card telemetry-error-card">
+          <div className="card-title">Telemetry feed unavailable</div>
+          <p>{allTimeTelemetry.error.message}</p>
+          <small>
+            If this request is being made directly from the browser, the Trackmaster APIs may also require CORS or
+            proxy support depending on the environment.
+          </small>
+        </section>
+      ) : null}
+
+      {activeTab === 'dashboard' && telemetry.error ? (
         <section className="card telemetry-error-card">
           <div className="card-title">Telemetry feed unavailable</div>
           <p>{telemetry.error.message}</p>
@@ -297,297 +676,16 @@ export default function VehicleTelemetry() {
         </section>
       ) : null}
 
-      {telemetry.data ? (
-        <>
-          <section className="telemetry-summary-grid">
-            {summaryCards(telemetry.data).map((card) => (
-              <div key={card.label} className="card telemetry-summary-card">
-                <div className="telemetry-summary-label">{card.label}</div>
-                <div className="telemetry-summary-value">{card.value}</div>
-                <div className="telemetry-summary-note">{card.note}</div>
-              </div>
-            ))}
-          </section>
+      {activeTab === 'all_time' && allTimeTelemetry.data ? (
+        <TelemetryDashboardContent
+          data={allTimeTelemetry.data}
+          dayNightChartData={allTimeDayNightChartData}
+          behaviorIndicators={allTimeBehaviorIndicators}
+        />
+      ) : null}
 
-          <section className="telemetry-panel-grid">
-            <div className="card telemetry-panel">
-              <div className="telemetry-panel-head">
-                <div>
-                  <div className="card-title">Day vs Night Driving</div>
-                  <div className="telemetry-panel-subtitle">Computed from trip timestamps using the 6 AM / 6 PM rule</div>
-                </div>
-              </div>
-              <div className="telemetry-chart-two-up">
-                <div className="telemetry-chart-wrap">
-                  <ResponsiveContainer width="100%" height={220}>
-                    <PieChart>
-                      <Pie data={dayNightChartData} dataKey="value" nameKey="name" innerRadius={58} outerRadius={82} paddingAngle={3}>
-                        {dayNightChartData.map((entry) => (
-                          <Cell key={entry.name} fill={entry.color} />
-                        ))}
-                      </Pie>
-                      <Tooltip content={<TooltipShell />} />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-                <div className="telemetry-side-metrics">
-                  <div className="telemetry-side-metric">
-                    <span>Day driving</span>
-                    <strong>{formatKm(telemetry.data.dayDrivingKm)}</strong>
-                    <small>{formatPercent(telemetry.data.dayDrivingPct)} - {formatMinutes(telemetry.data.dayDrivingMinutes)}</small>
-                  </div>
-                  <div className="telemetry-side-metric">
-                    <span>Night driving</span>
-                    <strong>{formatKm(telemetry.data.nightDrivingKm)}</strong>
-                    <small>{formatPercent(telemetry.data.nightDrivingPct)} - {formatMinutes(telemetry.data.nightDrivingMinutes)}</small>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="card telemetry-panel">
-              <div className="telemetry-panel-head">
-                <div>
-                  <div className="card-title">Driving Mix</div>
-                  <div className="telemetry-panel-subtitle">Urban and rural placeholders, ready for future geofencing logic</div>
-                </div>
-              </div>
-              <div className="telemetry-progress-stack">
-                <div className="telemetry-progress-block">
-                  <div className="telemetry-progress-row">
-                    <span>Urban Driving</span>
-                    <strong>{formatKm(telemetry.data.urbanDrivingKm)} - {formatPercent(telemetry.data.urbanDrivingPct)}</strong>
-                  </div>
-                  <div className="telemetry-progress-track">
-                    <div className="telemetry-progress-fill telemetry-tone-green" style={{ width: `${telemetry.data.urbanDrivingPct}%` }} />
-                  </div>
-                </div>
-                <div className="telemetry-progress-block">
-                  <div className="telemetry-progress-row">
-                    <span>Rural Driving</span>
-                    <strong>{formatKm(telemetry.data.ruralDrivingKm)} - {formatPercent(telemetry.data.ruralDrivingPct)}</strong>
-                  </div>
-                  <div className="telemetry-progress-track">
-                    <div className="telemetry-progress-fill telemetry-tone-yellow" style={{ width: `${telemetry.data.ruralDrivingPct}%` }} />
-                  </div>
-                </div>
-              </div>
-              <div className="telemetry-placeholder-note">
-                Urban/rural segmentation is currently static and designed for future route-based classification.
-              </div>
-            </div>
-          </section>
-
-          <section className="telemetry-panel-grid">
-            <div className="card telemetry-panel">
-              <div className="telemetry-panel-head">
-                <div>
-                  <div className="card-title">Speed Trend</div>
-                  <div className="telemetry-panel-subtitle">Time-wise for short ranges, daily average speed for longer ranges</div>
-                </div>
-              </div>
-              <div className="telemetry-chart-wrap">
-                <ResponsiveContainer width="100%" height={260}>
-                  <LineChart data={telemetry.data.speedTrend}>
-                    <XAxis dataKey="label" tickLine={false} axisLine={false} />
-                    <YAxis tickLine={false} axisLine={false} width={42} />
-                    <Tooltip content={<TooltipShell />} />
-                    <Line type="monotone" dataKey="speed" stroke="#005dac" strokeWidth={3} dot={false} name="Speed (km/h)" />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-
-            <div className="card telemetry-panel">
-              <div className="telemetry-panel-head">
-                <div>
-                  <div className="card-title">Distance Trend</div>
-                  <div className="telemetry-panel-subtitle">Trip-wise for short ranges, daily distance driven for longer ranges</div>
-                </div>
-              </div>
-              <div className="telemetry-chart-wrap">
-                <ResponsiveContainer width="100%" height={260}>
-                  <AreaChart data={telemetry.data.distanceTrend}>
-                    <XAxis dataKey="label" tickLine={false} axisLine={false} />
-                    <YAxis tickLine={false} axisLine={false} width={52} />
-                    <Tooltip content={<TooltipShell />} />
-                    <Area type="monotone" dataKey="distanceKm" stroke="#0b8666" fill="rgba(11, 134, 102, 0.18)" name="Distance (km)" />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-          </section>
-
-          <section className="telemetry-panel-grid">
-            <div className="card telemetry-panel">
-              <div className="telemetry-panel-head">
-                <div>
-                  <div className="card-title">Driving Behaviour Indicators</div>
-                  <div className="telemetry-panel-subtitle">Colour-coded heuristics for movement quality and risk</div>
-                </div>
-              </div>
-              <div className="telemetry-indicator-grid">
-                {behaviorIndicators.map((indicator) => (
-                  <div key={indicator.label} className={`telemetry-indicator-card ${toneClass(indicatorTone(indicator.tone))}`}>
-                    <div className="telemetry-indicator-head">
-                      <span className={`telemetry-indicator-dot ${toneClass(indicatorTone(indicator.tone))}`} />
-                      <strong>{indicator.label}</strong>
-                    </div>
-                    <p>{indicator.description}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="card telemetry-panel">
-              <div className="telemetry-panel-head">
-                <div>
-                  <div className="card-title">Speed Events Timeline</div>
-                  <div className="telemetry-panel-subtitle">Recent high-signal speed events and driving activity timeline</div>
-                </div>
-              </div>
-              <div className="telemetry-events-list">
-                {telemetry.data.speedEvents.length ? (
-                  telemetry.data.speedEvents.map((event) => (
-                    <div key={`${event.label}-${event.details}`} className="telemetry-event-row">
-                      <span className={`telemetry-event-pill ${toneClass(event.tone)}`}>{event.label}</span>
-                      <div className="telemetry-event-copy">{event.details}</div>
-                    </div>
-                  ))
-                ) : (
-                  <div className="telemetry-empty-state">No speed events were returned for this range.</div>
-                )}
-              </div>
-              <div className="telemetry-activity-chart">
-                <ResponsiveContainer width="100%" height={180}>
-                  <BarChart data={telemetry.data.activityTimeline}>
-                    <XAxis dataKey="label" tickLine={false} axisLine={false} />
-                    <YAxis tickLine={false} axisLine={false} width={42} />
-                    <Tooltip content={<TooltipShell />} />
-                    <Bar dataKey="durationMinutes" radius={[6, 6, 0, 0]} name="Duration (min)">
-                      {telemetry.data.activityTimeline.map((entry) => (
-                        <Cell
-                          key={entry.label}
-                          fill={entry.tone === 'red' ? '#c92a2a' : entry.tone === 'yellow' ? '#d29b00' : '#0b8666'}
-                        />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-          </section>
-
-          <section className="card telemetry-panel">
-            <div className="telemetry-panel-head">
-              <div>
-                <div className="card-title">Ignition Trip Timeline</div>
-                <div className="telemetry-panel-subtitle">Trips are now derived from ignition on/off sessions, with distance added from the distance report</div>
-              </div>
-            </div>
-            <div className="telemetry-table-wrap">
-              <table className="usage-billing-table telemetry-table">
-                <thead>
-                  <tr>
-                    <th>Trip</th>
-                    <th>Ignition On</th>
-                    <th>Ignition Off</th>
-                    <th>Duration</th>
-                    <th>Distance</th>
-                    <th>Start Location</th>
-                    <th>End Location</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {telemetry.data.tripSegments.length ? (
-                    telemetry.data.tripSegments.map((trip, index) => {
-                      const tripTone: TelemetryTone =
-                        trip.distanceKm >= 10 || trip.durationMinutes >= 30 ? 'red' : trip.distanceKm >= 4 ? 'yellow' : 'green';
-                      return (
-                        <tr key={trip.id}>
-                          <td style={{ fontFamily: 'var(--font-mono)' }}>#{index + 1}</td>
-                          <td>{formatDateTime(trip.startTime)}</td>
-                          <td>{formatDateTime(trip.endTime)}</td>
-                          <td style={{ fontFamily: 'var(--font-mono)' }}>{formatMinutes(trip.durationMinutes)}</td>
-                          <td>
-                            <span className={`telemetry-inline-pill ${toneClass(tripTone)}`}>{formatKm(trip.distanceKm)}</span>
-                          </td>
-                          <td>
-                            <ExactLocationCell latitude={trip.startLatitude} longitude={trip.startLongitude} />
-                          </td>
-                          <td>
-                            <ExactLocationCell latitude={trip.endLatitude} longitude={trip.endLongitude} />
-                          </td>
-                        </tr>
-                      );
-                    })
-                  ) : (
-                    <tr>
-                      <td colSpan={7} className="telemetry-empty-table">
-                        No ignition trip sessions were returned for this range.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </section>
-
-          <section className="card telemetry-panel">
-            <div className="telemetry-panel-head">
-              <div>
-                <div className="card-title">Overspeeding Instances</div>
-                <div className="telemetry-panel-subtitle">
-                  From OverSpeed Report overSpeedData; duration uses reported overSpeedDuration
-                </div>
-              </div>
-            </div>
-            <div className="telemetry-table-wrap">
-              <table className="usage-billing-table telemetry-table">
-                <thead>
-                  <tr>
-                    <th>Instance</th>
-                    <th>Start Time</th>
-                    <th>End Time</th>
-                    <th>Duration</th>
-                    <th>Peak Speed</th>
-                    <th>Start Location</th>
-                    <th>End Location</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {telemetry.data.overspeedInstances.length ? (
-                    telemetry.data.overspeedInstances.map((instance, index) => (
-                      <tr key={instance.id}>
-                        <td style={{ fontFamily: 'var(--font-mono)' }}>#{index + 1}</td>
-                        <td>{formatDateTime(instance.startTime)}</td>
-                        <td>{formatDateTime(instance.endTime)}</td>
-                        <td style={{ fontFamily: 'var(--font-mono)' }}>{formatMinutes(instance.durationMinutes)}</td>
-                        <td>
-                          <span className={`telemetry-inline-pill ${toneClass(instance.peakSpeed >= 80 ? 'red' : 'yellow')}`}>
-                            {Math.round(instance.peakSpeed)} km/h
-                          </span>
-                        </td>
-                        <td>
-                          <ExactLocationCell latitude={instance.startLatitude} longitude={instance.startLongitude} />
-                        </td>
-                        <td>
-                          <ExactLocationCell latitude={instance.endLatitude} longitude={instance.endLongitude} />
-                        </td>
-                      </tr>
-                    ))
-                  ) : (
-                    <tr>
-                      <td colSpan={7} className="telemetry-empty-table">
-                        No overspeed instances were detected for this range.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </section>
-        </>
+      {activeTab === 'dashboard' && telemetry.data ? (
+        <TelemetryDashboardContent data={telemetry.data} dayNightChartData={dayNightChartData} behaviorIndicators={behaviorIndicators} />
       ) : null}
     </div>
   );

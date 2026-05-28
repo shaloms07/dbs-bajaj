@@ -3329,6 +3329,26 @@ tbody td {
   color: var(--text2);
 }
 
+.telemetry-tabs {
+  margin-top: 18px;
+  margin-bottom: 0;
+  gap: 8px;
+  border-bottom: none;
+  flex-wrap: wrap;
+}
+
+.telemetry-tabs .tab {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  margin-bottom: 0;
+  background: rgba(255, 255, 255, 0.78);
+}
+
+.telemetry-tabs .tab.active {
+  background: rgba(0, 93, 172, 0.1);
+  border-color: rgba(0, 93, 172, 0.28);
+}
+
 .telemetry-filter-bar {
   display: grid;
   gap: 14px;
@@ -3342,6 +3362,10 @@ tbody td {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
+}
+
+.telemetry-filter-grid--single {
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .telemetry-filter-field {
@@ -3834,6 +3858,15 @@ tbody td {
   .telemetry-indicator-grid,
   .telemetry-trip-route-grid {
     grid-template-columns: 1fr;
+  }
+
+  .telemetry-tabs {
+    gap: 10px;
+  }
+
+  .telemetry-tabs .tab {
+    width: 100%;
+    text-align: center;
   }
 
   .telemetry-event-row {
