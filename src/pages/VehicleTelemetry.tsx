@@ -127,15 +127,28 @@ function indicatorTone(value: TelemetryBehaviorIndicator['tone']) {
   return value;
 }
 
-function summaryCards(data: VehicleTelemetryData) {
-  const averageTripDivisor = Math.max(data.totalTrips, 1);
+function getRangeDaysCount(filter: TelemetryFilter) {
+  const start = new Date(filter.startDateTime);
+  const end = new Date(filter.endDateTime);
+  const diffMs = Math.max(end.getTime() - start.getTime(), 0);
+  return Math.max(diffMs / (24 * 60 * 60 * 1000), 1);
+}
+
+function summaryCards(data: VehicleTelemetryData, rangeDays: number) {
+  const averageDayDivisor = Math.max(rangeDays, 1);
 
   return [
-    { label: 'Total Distance Travelled', value: formatKm(data.totalDistanceKm), note: 'From Distance Report TotalDistance' },
+    {
+      label: 'Total Distance Travelled',
+      value: formatKm(data.totalDistanceKm),
+      note: 'From Distance Report TotalDistance',
+      average: `${formatKm(data.totalDistanceKm / averageDayDivisor)} / day`
+    },
     {
       label: 'Total Driving Duration',
       value: formatMinutes(data.totalDrivingDurationMinutes),
-      note: `${data.totalTrips} ignition sessions - Avg/trip ${formatMinutes(data.totalDrivingDurationMinutes / averageTripDivisor)}`
+      note: `${data.totalTrips} ignition sessions`,
+      average: `${formatMinutes(data.totalDrivingDurationMinutes / averageDayDivisor)} / day`
     },
     { label: 'Max Speed', value: `${Math.round(data.maxSpeed)} km/h`, note: 'From OverSpeed Report maxSpeed' },
     {
@@ -146,22 +159,26 @@ function summaryCards(data: VehicleTelemetryData) {
     {
       label: 'Day Driving',
       value: formatKm(data.dayDrivingKm),
-      note: `${formatPercent(data.dayDrivingPct)} - ${formatMinutes(data.dayDrivingMinutes)} - Avg/trip ${formatKm(data.dayDrivingKm / averageTripDivisor)}`
+      note: `${formatPercent(data.dayDrivingPct)} - ${formatMinutes(data.dayDrivingMinutes)}`,
+      average: `${formatKm(data.dayDrivingKm / averageDayDivisor)} / day`
     },
     {
       label: 'Night Driving',
       value: formatKm(data.nightDrivingKm),
-      note: `${formatPercent(data.nightDrivingPct)} - ${formatMinutes(data.nightDrivingMinutes)} - Avg/trip ${formatKm(data.nightDrivingKm / averageTripDivisor)}`
+      note: `${formatPercent(data.nightDrivingPct)} - ${formatMinutes(data.nightDrivingMinutes)}`,
+      average: `${formatKm(data.nightDrivingKm / averageDayDivisor)} / day`
     },
     {
       label: 'Urban Driving',
       value: formatKm(data.urbanDrivingKm),
-      note: `${formatPercent(data.urbanDrivingPct)} placeholder - Avg/trip ${formatKm(data.urbanDrivingKm / averageTripDivisor)}`
+      note: `${formatPercent(data.urbanDrivingPct)} placeholder`,
+      average: `${formatKm(data.urbanDrivingKm / averageDayDivisor)} / day`
     },
     {
       label: 'Rural Driving',
       value: formatKm(data.ruralDrivingKm),
-      note: `${formatPercent(data.ruralDrivingPct)} placeholder - Avg/trip ${formatKm(data.ruralDrivingKm / averageTripDivisor)}`
+      note: `${formatPercent(data.ruralDrivingPct)} placeholder`,
+      average: `${formatKm(data.ruralDrivingKm / averageDayDivisor)} / day`
     }
   ];
 }
@@ -206,14 +223,17 @@ function ExactLocationCell({
 
 function TelemetryDashboardContent({
   data,
+  filter,
   dayNightChartData,
   behaviorIndicators
 }: {
   data: VehicleTelemetryData;
+  filter: TelemetryFilter;
   dayNightChartData: Array<{ name: string; value: number; color: string }>;
   behaviorIndicators: TelemetryBehaviorIndicator[];
 }) {
   const [visibleTripCount, setVisibleTripCount] = useState(10);
+  const rangeDays = getRangeDaysCount(filter);
 
   useEffect(() => {
     setVisibleTripCount(10);
@@ -224,10 +244,11 @@ function TelemetryDashboardContent({
   return (
     <>
       <section className="telemetry-summary-grid">
-        {summaryCards(data).map((card) => (
+        {summaryCards(data, rangeDays).map((card) => (
           <div key={card.label} className="card telemetry-summary-card">
             <div className="telemetry-summary-label">{card.label}</div>
             <div className="telemetry-summary-value">{card.value}</div>
+            {'average' in card && card.average ? <div className="telemetry-summary-average">{card.average}</div> : null}
             <div className="telemetry-summary-note">{card.note}</div>
           </div>
         ))}
@@ -733,13 +754,19 @@ export default function VehicleTelemetry() {
       {activeTab === 'all_time' && allTimeTelemetry.data ? (
         <TelemetryDashboardContent
           data={allTimeTelemetry.data}
+          filter={allTimeFilter}
           dayNightChartData={allTimeDayNightChartData}
           behaviorIndicators={allTimeBehaviorIndicators}
         />
       ) : null}
 
       {activeTab === 'dashboard' && telemetry.data ? (
-        <TelemetryDashboardContent data={telemetry.data} dayNightChartData={dayNightChartData} behaviorIndicators={behaviorIndicators} />
+        <TelemetryDashboardContent
+          data={telemetry.data}
+          filter={appliedFilter}
+          dayNightChartData={dayNightChartData}
+          behaviorIndicators={behaviorIndicators}
+        />
       ) : null}
     </div>
   );

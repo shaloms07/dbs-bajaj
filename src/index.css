@@ -3470,6 +3470,14 @@ tbody td {
   overflow-wrap: anywhere;
 }
 
+.telemetry-summary-average {
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--accent);
+  overflow-wrap: anywhere;
+}
+
 .telemetry-summary-note {
   color: var(--text2);
   font-size: 12px;
