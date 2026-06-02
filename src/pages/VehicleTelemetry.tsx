@@ -39,6 +39,17 @@ function formatKm(value: number) {
   return `${value.toLocaleString('en-IN', { maximumFractionDigits: 1 })} km`;
 }
 
+function formatSeconds(totalSeconds: number) {
+  if (!totalSeconds) return '0 sec';
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = Math.round(totalSeconds % 60);
+
+  if (hours) return `${hours}h ${minutes}m`;
+  if (minutes) return seconds ? `${minutes} min ${seconds} sec` : `${minutes} min`;
+  return `${seconds} sec`;
+}
+
 function formatDateTime(value?: string | null) {
   if (!value) return 'N/A';
   return new Date(value).toLocaleString('en-IN', {
@@ -119,6 +130,19 @@ function getOneYearWindow() {
   };
 }
 
+function getPreviousPeriodRange(filter: TelemetryFilter) {
+  const start = new Date(filter.startDateTime);
+  const end = new Date(filter.endDateTime);
+  const durationMs = Math.max(end.getTime() - start.getTime(), 0);
+  const previousEnd = new Date(start.getTime() - 1000);
+  const previousStart = new Date(previousEnd.getTime() - durationMs);
+
+  return {
+    startDateTime: toDateTimeLocalValue(previousStart),
+    endDateTime: toDateTimeLocalValue(previousEnd)
+  };
+}
+
 function toneClass(tone: TelemetryTone) {
   return `telemetry-tone-${tone}`;
 }
@@ -127,60 +151,26 @@ function indicatorTone(value: TelemetryBehaviorIndicator['tone']) {
   return value;
 }
 
-function getRangeDaysCount(filter: TelemetryFilter) {
-  const start = new Date(filter.startDateTime);
-  const end = new Date(filter.endDateTime);
-  const diffMs = Math.max(end.getTime() - start.getTime(), 0);
-  return Math.max(diffMs / (24 * 60 * 60 * 1000), 1);
+function getSeverityTone(value: VehicleTelemetryData['overspeedSeverity'] | VehicleTelemetryData['idlingSeverity']): TelemetryTone {
+  if (value === 'high_risk' || value === 'critical') return 'red';
+  if (value === 'moderate' || value === 'warning') return 'yellow';
+  return 'green';
 }
 
-function summaryCards(data: VehicleTelemetryData, rangeDays: number) {
-  const averageDayDivisor = Math.max(rangeDays, 1);
+function getDistanceTrend(current: number, previous?: number) {
+  if (previous == null) return null;
+  if (previous === 0) {
+    return {
+      text: current > 0 ? 'New activity in this period' : 'No change from previous period',
+      tone: current > 0 ? 'green' : 'yellow'
+    } as const;
+  }
 
-  return [
-    {
-      label: 'Total Distance Travelled',
-      value: formatKm(data.totalDistanceKm),
-      note: 'From Distance Report TotalDistance',
-      average: `${formatKm(data.totalDistanceKm / averageDayDivisor)} / day`
-    },
-    {
-      label: 'Total Driving Duration',
-      value: formatMinutes(data.totalDrivingDurationMinutes),
-      note: `${data.totalTrips} ignition sessions`,
-      average: `${formatMinutes(data.totalDrivingDurationMinutes / averageDayDivisor)} / day`
-    },
-    { label: 'Max Speed', value: `${Math.round(data.maxSpeed)} km/h`, note: 'From OverSpeed Report maxSpeed' },
-    {
-      label: 'Overspeed Count',
-      value: data.overspeedCount.toLocaleString('en-IN'),
-      note: `From OverSpeed Report overspeedCount; limit ${data.overspeedLimit} km/h`
-    },
-    {
-      label: 'Day Driving',
-      value: formatKm(data.dayDrivingKm),
-      note: `${formatPercent(data.dayDrivingPct)} - ${formatMinutes(data.dayDrivingMinutes)}`,
-      average: `${formatKm(data.dayDrivingKm / averageDayDivisor)} / day`
-    },
-    {
-      label: 'Night Driving',
-      value: formatKm(data.nightDrivingKm),
-      note: `${formatPercent(data.nightDrivingPct)} - ${formatMinutes(data.nightDrivingMinutes)}`,
-      average: `${formatKm(data.nightDrivingKm / averageDayDivisor)} / day`
-    },
-    {
-      label: 'Urban Driving',
-      value: formatKm(data.urbanDrivingKm),
-      note: `${formatPercent(data.urbanDrivingPct)} placeholder`,
-      average: `${formatKm(data.urbanDrivingKm / averageDayDivisor)} / day`
-    },
-    {
-      label: 'Rural Driving',
-      value: formatKm(data.ruralDrivingKm),
-      note: `${formatPercent(data.ruralDrivingPct)} placeholder`,
-      average: `${formatKm(data.ruralDrivingKm / averageDayDivisor)} / day`
-    }
-  ];
+  const pct = ((current - previous) / previous) * 100;
+  return {
+    text: `${pct >= 0 ? '+' : ''}${pct.toFixed(1)}% vs previous period`,
+    tone: pct >= 0 ? 'green' : 'yellow'
+  } as const;
 }
 
 function TooltipShell({ active, payload, label }: { active?: boolean; payload?: Array<{ value: number; name: string }>; label?: string }) {
@@ -223,51 +213,66 @@ function ExactLocationCell({
 
 function TelemetryDashboardContent({
   data,
+  previousData,
   filter,
   dayNightChartData,
   behaviorIndicators
 }: {
   data: VehicleTelemetryData;
+  previousData?: VehicleTelemetryData;
   filter: TelemetryFilter;
   dayNightChartData: Array<{ name: string; value: number; color: string }>;
   behaviorIndicators: TelemetryBehaviorIndicator[];
 }) {
   const [visibleTripCount, setVisibleTripCount] = useState(10);
-  const rangeDays = getRangeDaysCount(filter);
+  const [showIdlingDetails, setShowIdlingDetails] = useState(false);
 
   useEffect(() => {
     setVisibleTripCount(10);
+    setShowIdlingDetails(false);
   }, [data.vehicleNumber, data.tripSegments.length]);
+
   const visibleTrips = data.tripSegments.slice(0, visibleTripCount);
   const hasMoreTrips = data.tripSegments.length > visibleTripCount;
+  const terrainChartData = [
+    { name: 'Urban', value: Number(data.urbanDrivingPct.toFixed(1)), color: '#005dac' },
+    { name: 'Rural', value: Number(data.ruralDrivingPct.toFixed(1)), color: '#0b8666' },
+    { name: 'Hilly', value: Number(data.hillyDrivingPct.toFixed(1)), color: '#d29b00' }
+  ];
+  const distanceTrend = getDistanceTrend(data.totalDistanceKm, previousData?.totalDistanceKm);
 
   return (
     <>
-      <section className="telemetry-summary-grid">
-        {summaryCards(data, rangeDays).map((card) => (
-          <div key={card.label} className="card telemetry-summary-card">
-            <div className="telemetry-summary-label">{card.label}</div>
-            <div className="telemetry-summary-value">{card.value}</div>
-            {'average' in card && card.average ? <div className="telemetry-summary-average">{card.average}</div> : null}
-            <div className="telemetry-summary-note">{card.note}</div>
+      <section className="telemetry-insights-grid">
+        {data.insights.map((insight) => (
+          <div key={insight} className="card telemetry-insight-card">
+            <div className="telemetry-summary-label">Smart Insight</div>
+            <p>{insight}</p>
           </div>
         ))}
       </section>
 
-      <section className="telemetry-panel-grid">
-        <div className="card telemetry-panel">
+      <section className="telemetry-section-header">
+        <div>
+          <p className="api-eyebrow">Terrain Analysis</p>
+          <h2>Terrain classification and operating mix</h2>
+        </div>
+      </section>
+
+      <section className="telemetry-kpi-feature-grid">
+        <div className="card telemetry-kpi-card">
           <div className="telemetry-panel-head">
             <div>
-              <div className="card-title">Day vs Night Driving</div>
-              <div className="telemetry-panel-subtitle">Computed from trip timestamps using the 6 AM / 6 PM rule</div>
+              <div className="card-title">Terrain Classification</div>
+              <div className="telemetry-panel-subtitle">Default terrain mix, ready for future terrain enrichment</div>
             </div>
           </div>
           <div className="telemetry-chart-two-up">
             <div className="telemetry-chart-wrap">
               <ResponsiveContainer width="100%" height={220}>
                 <PieChart>
-                  <Pie data={dayNightChartData} dataKey="value" nameKey="name" innerRadius={58} outerRadius={82} paddingAngle={3}>
-                    {dayNightChartData.map((entry) => (
+                  <Pie data={terrainChartData} dataKey="value" nameKey="name" innerRadius={58} outerRadius={82} paddingAngle={3}>
+                    {terrainChartData.map((entry) => (
                       <Cell key={entry.name} fill={entry.color} />
                     ))}
                   </Pie>
@@ -277,14 +282,19 @@ function TelemetryDashboardContent({
             </div>
             <div className="telemetry-side-metrics">
               <div className="telemetry-side-metric">
-                <span>Day driving</span>
-                <strong>{formatKm(data.dayDrivingKm)}</strong>
-                <small>{formatPercent(data.dayDrivingPct)} - {formatMinutes(data.dayDrivingMinutes)}</small>
+                <span>Urban</span>
+                <strong>{formatPercent(data.urbanDrivingPct)}</strong>
+                <small>{formatKm(data.urbanDrivingKm)}</small>
               </div>
               <div className="telemetry-side-metric">
-                <span>Night driving</span>
-                <strong>{formatKm(data.nightDrivingKm)}</strong>
-                <small>{formatPercent(data.nightDrivingPct)} - {formatMinutes(data.nightDrivingMinutes)}</small>
+                <span>Rural</span>
+                <strong>{formatPercent(data.ruralDrivingPct)}</strong>
+                <small>{formatKm(data.ruralDrivingKm)}</small>
+              </div>
+              <div className="telemetry-side-metric">
+                <span>Hilly</span>
+                <strong>{formatPercent(data.hillyDrivingPct)}</strong>
+                <small>{formatKm(data.hillyDrivingKm)}</small>
               </div>
             </div>
           </div>
@@ -293,8 +303,8 @@ function TelemetryDashboardContent({
         <div className="card telemetry-panel">
           <div className="telemetry-panel-head">
             <div>
-              <div className="card-title">Driving Mix</div>
-              <div className="telemetry-panel-subtitle">Urban and rural placeholders, ready for future geofencing logic</div>
+              <div className="card-title">Terrain Mix</div>
+              <div className="telemetry-panel-subtitle">Current terrain defaults are placeholders until route classification is connected</div>
             </div>
           </div>
           <div className="telemetry-progress-stack">
@@ -316,9 +326,54 @@ function TelemetryDashboardContent({
                 <div className="telemetry-progress-fill telemetry-tone-yellow" style={{ width: `${data.ruralDrivingPct}%` }} />
               </div>
             </div>
+            <div className="telemetry-progress-block">
+              <div className="telemetry-progress-row">
+                <span>Hilly Driving</span>
+                <strong>{formatKm(data.hillyDrivingKm)} - {formatPercent(data.hillyDrivingPct)}</strong>
+              </div>
+              <div className="telemetry-progress-track">
+                <div className="telemetry-progress-fill telemetry-tone-red" style={{ width: `${data.hillyDrivingPct}%` }} />
+              </div>
+            </div>
           </div>
-          <div className="telemetry-placeholder-note">
-            Urban/rural segmentation is currently static and designed for future route-based classification.
+        </div>
+      </section>
+
+      <section className="telemetry-section-header telemetry-section-header-compact">
+        <div>
+          <p className="api-eyebrow">Speed & Distance</p>
+          <h2>Utilization, speed profile, and overspeed review</h2>
+        </div>
+      </section>
+
+      <section className="telemetry-kpi-grid telemetry-kpi-grid--two">
+        <div className="card telemetry-kpi-card">
+          <div className="telemetry-summary-label">Total Distance Driven</div>
+          <div className="telemetry-summary-value">{formatKm(data.totalDistanceKm)}</div>
+          <div className="telemetry-summary-note">Selected period utilization</div>
+          <div className={`telemetry-kpi-badge ${toneClass(distanceTrend?.tone ?? 'green')}`}>
+            {distanceTrend?.text ?? 'Trend unavailable'}
+          </div>
+        </div>
+
+        <div className="card telemetry-kpi-card">
+          <div className="telemetry-summary-label">Overspeeding</div>
+          <div className="telemetry-kpi-stat-grid">
+            <div>
+              <span>Total Events</span>
+              <strong>{data.overspeedCount}</strong>
+            </div>
+            <div>
+              <span>Highest Speed</span>
+              <strong>{Math.round(data.maxSpeed)} km/h</strong>
+            </div>
+            <div>
+              <span>Above Threshold</span>
+              <strong>{formatMinutes(data.overspeedDurationMinutes)}</strong>
+            </div>
+          </div>
+          <div className={`telemetry-kpi-badge ${toneClass(getSeverityTone(data.overspeedSeverity))}`}>
+            {data.overspeedSeverity === 'high_risk' ? 'High Risk' : data.overspeedSeverity === 'moderate' ? 'Moderate' : 'Normal'}
           </div>
         </div>
       </section>
@@ -363,130 +418,11 @@ function TelemetryDashboardContent({
         </div>
       </section>
 
-      <section className="telemetry-panel-grid">
-        <div className="card telemetry-panel">
-          <div className="telemetry-panel-head">
-            <div>
-              <div className="card-title">Driving Behaviour Indicators</div>
-              <div className="telemetry-panel-subtitle">Colour-coded heuristics for movement quality and risk</div>
-            </div>
-          </div>
-          <div className="telemetry-indicator-grid">
-            {behaviorIndicators.map((indicator) => (
-              <div key={indicator.label} className={`telemetry-indicator-card ${toneClass(indicatorTone(indicator.tone))}`}>
-                <div className="telemetry-indicator-head">
-                  <span className={`telemetry-indicator-dot ${toneClass(indicatorTone(indicator.tone))}`} />
-                  <strong>{indicator.label}</strong>
-                </div>
-                <p>{indicator.description}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="card telemetry-panel">
-          <div className="telemetry-panel-head">
-            <div>
-              <div className="card-title">Speed Events Timeline</div>
-              <div className="telemetry-panel-subtitle">Recent high-signal speed events and driving activity timeline</div>
-            </div>
-          </div>
-          <div className="telemetry-events-list">
-            {data.speedEvents.length ? (
-              data.speedEvents.map((event) => (
-                <div key={`${event.label}-${event.details}`} className="telemetry-event-row">
-                  <span className={`telemetry-event-pill ${toneClass(event.tone)}`}>{event.label}</span>
-                  <div className="telemetry-event-copy">{event.details}</div>
-                </div>
-              ))
-            ) : (
-              <div className="telemetry-empty-state">No speed events were returned for this range.</div>
-            )}
-          </div>
-          <div className="telemetry-activity-chart">
-            <ResponsiveContainer width="100%" height={180}>
-              <BarChart data={data.activityTimeline}>
-                <XAxis dataKey="label" tickLine={false} axisLine={false} />
-                <YAxis tickLine={false} axisLine={false} width={42} />
-                <Tooltip content={<TooltipShell />} />
-                <Bar dataKey="durationMinutes" radius={[6, 6, 0, 0]} name="Duration (min)">
-                  {data.activityTimeline.map((entry) => (
-                    <Cell key={entry.label} fill={entry.tone === 'red' ? '#c92a2a' : entry.tone === 'yellow' ? '#d29b00' : '#0b8666'} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-      </section>
-
-      <section className="card telemetry-panel">
-        <div className="telemetry-panel-head">
-          <div>
-            <div className="card-title">Ignition Trip Timeline</div>
-            <div className="telemetry-panel-subtitle">Trips are now derived from ignition on/off sessions, with distance added from the distance report</div>
-          </div>
-        </div>
-        <div className="telemetry-table-wrap">
-          <table className="usage-billing-table telemetry-table">
-            <thead>
-              <tr>
-                <th>Trip</th>
-                <th>Ignition On</th>
-                <th>Ignition Off</th>
-                <th>Duration</th>
-                <th>Distance</th>
-                <th>Start Location</th>
-                <th>End Location</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.tripSegments.length ? (
-                visibleTrips.map((trip, index) => {
-                  const tripTone: TelemetryTone =
-                    trip.distanceKm >= 10 || trip.durationMinutes >= 30 ? 'red' : trip.distanceKm >= 4 ? 'yellow' : 'green';
-                  return (
-                    <tr key={trip.id}>
-                      <td style={{ fontFamily: 'var(--font-mono)' }}>#{index + 1}</td>
-                      <td>{formatDateTime(trip.startTime)}</td>
-                      <td>{formatDateTime(trip.endTime)}</td>
-                      <td style={{ fontFamily: 'var(--font-mono)' }}>{formatMinutes(trip.durationMinutes)}</td>
-                      <td>
-                        <span className={`telemetry-inline-pill ${toneClass(tripTone)}`}>{formatKm(trip.distanceKm)}</span>
-                      </td>
-                      <td>
-                        <ExactLocationCell latitude={trip.startLatitude} longitude={trip.startLongitude} />
-                      </td>
-                      <td>
-                        <ExactLocationCell latitude={trip.endLatitude} longitude={trip.endLongitude} />
-                      </td>
-                    </tr>
-                  );
-                })
-              ) : (
-                <tr>
-                  <td colSpan={7} className="telemetry-empty-table">
-                    No ignition trip sessions were returned for this range.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-        {hasMoreTrips ? (
-          <div className="telemetry-table-actions">
-            <button type="button" className="lookup-btn telemetry-show-more-btn" onClick={() => setVisibleTripCount((count) => count + 10)}>
-              Show more
-            </button>
-          </div>
-        ) : null}
-      </section>
-
       <section className="card telemetry-panel">
         <div className="telemetry-panel-head">
           <div>
             <div className="card-title">Overspeeding Instances</div>
-            <div className="telemetry-panel-subtitle">From OverSpeed Report overSpeedData; duration uses reported overSpeedDuration</div>
+            <div className="telemetry-panel-subtitle">From OverSpeed Report overSpeedData; duration uses the report summary</div>
           </div>
         </div>
         <div className="telemetry-table-wrap">
@@ -534,6 +470,287 @@ function TelemetryDashboardContent({
           </table>
         </div>
       </section>
+
+      <section className="telemetry-section-header telemetry-section-header-compact">
+        <div>
+          <p className="api-eyebrow">Day & Night</p>
+          <h2>Time-of-day driving behavior</h2>
+        </div>
+      </section>
+
+      <section className="telemetry-kpi-feature-grid">
+        <div className="card telemetry-kpi-card">
+          <div className="telemetry-panel-head">
+            <div>
+              <div className="card-title">Day vs Night Driving</div>
+              <div className="telemetry-panel-subtitle">Distance split using the 6 AM / 6 PM driving window rule</div>
+            </div>
+          </div>
+          <div className="telemetry-chart-two-up">
+            <div className="telemetry-chart-wrap">
+              <ResponsiveContainer width="100%" height={220}>
+                <PieChart>
+                  <Pie data={dayNightChartData} dataKey="value" nameKey="name" innerRadius={58} outerRadius={82} paddingAngle={3}>
+                    {dayNightChartData.map((entry) => (
+                      <Cell key={entry.name} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip content={<TooltipShell />} />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="telemetry-side-metrics">
+              <div className="telemetry-side-metric">
+                <span>Day driving</span>
+                <strong>{formatKm(data.dayDrivingKm)}</strong>
+                <small>{formatPercent(data.dayDrivingPct)} - {formatMinutes(data.dayDrivingMinutes)}</small>
+              </div>
+              <div className="telemetry-side-metric">
+                <span>Night driving</span>
+                <strong>{formatKm(data.nightDrivingKm)}</strong>
+                <small>{formatPercent(data.nightDrivingPct)} - {formatMinutes(data.nightDrivingMinutes)}</small>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="card telemetry-panel">
+          <div className="telemetry-panel-head">
+            <div>
+              <div className="card-title">Driving Behaviour Indicators</div>
+              <div className="telemetry-panel-subtitle">Time-of-day and movement heuristics for quick review</div>
+            </div>
+          </div>
+          <div className="telemetry-indicator-grid">
+            {behaviorIndicators.map((indicator) => (
+              <div key={indicator.label} className={`telemetry-indicator-card ${toneClass(indicatorTone(indicator.tone))}`}>
+                <div className="telemetry-indicator-head">
+                  <span className={`telemetry-indicator-dot ${toneClass(indicatorTone(indicator.tone))}`} />
+                  <strong>{indicator.label}</strong>
+                </div>
+                <p>{indicator.description}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="telemetry-section-header telemetry-section-header-compact">
+        <div>
+          <p className="api-eyebrow">Idling & Ignition</p>
+          <h2>Idle behavior and ignition session analysis</h2>
+        </div>
+      </section>
+
+      <section className="telemetry-kpi-grid telemetry-kpi-grid--two">
+        <div className="card telemetry-kpi-card">
+          <div className="telemetry-summary-label">Vehicle Idling</div>
+          <div className="telemetry-kpi-stat-grid">
+            <div>
+              <span>Total Idling</span>
+              <strong>{formatSeconds(data.totalIdlingSeconds)}</strong>
+            </div>
+            <div>
+              <span>Ignition Cycles</span>
+              <strong>{data.ignitionCycles}</strong>
+            </div>
+            <div>
+              <span>Risk Score</span>
+              <strong>{data.idlingRiskScore}/100</strong>
+            </div>
+          </div>
+          <div className="telemetry-idling-mini-grid">
+            <div>
+              <span>Longest Idle</span>
+              <strong>{formatSeconds(data.longestIdleSessionSeconds)}</strong>
+            </div>
+            <div>
+              <span>Average Idle</span>
+              <strong>{formatSeconds(data.averageIdleSessionSeconds)}</strong>
+            </div>
+            <div>
+              <span>Idle Sessions</span>
+              <strong>{data.idleSessionCount}</strong>
+            </div>
+          </div>
+          <div className="telemetry-kpi-actions">
+            <div className={`telemetry-kpi-badge ${toneClass(getSeverityTone(data.idlingSeverity))}`}>
+              {data.idlingSeverity === 'critical' ? 'Critical' : data.idlingSeverity === 'warning' ? 'Warning' : 'Normal'}
+            </div>
+            {data.idlingSessions.length ? (
+              <button type="button" className="lookup-btn telemetry-detail-btn" onClick={() => setShowIdlingDetails(true)}>
+                View Detailed Idling Events
+              </button>
+            ) : null}
+          </div>
+        </div>
+
+        <div className="card telemetry-panel">
+          <div className="telemetry-panel-head">
+            <div>
+              <div className="card-title">Idling Intelligence</div>
+              <div className="telemetry-panel-subtitle">Computed from GetIdlingStatusReport without exposing raw event tables</div>
+            </div>
+          </div>
+          <div className="telemetry-idling-summary">
+            <div className="telemetry-idling-summary-row">
+              <span>Total Idling Time</span>
+              <strong>{formatSeconds(data.totalIdlingSeconds)}</strong>
+            </div>
+            <div className="telemetry-idling-summary-row">
+              <span>Ignition Cycles</span>
+              <strong>{data.ignitionCycles}</strong>
+            </div>
+            <div className="telemetry-idling-summary-row">
+              <span>Longest Idle Session</span>
+              <strong>{formatSeconds(data.longestIdleSessionSeconds)}</strong>
+            </div>
+            <div className="telemetry-idling-summary-row">
+              <span>Average Idle Session</span>
+              <strong>{formatSeconds(data.averageIdleSessionSeconds)}</strong>
+            </div>
+            <div className="telemetry-idling-summary-row">
+              <span>Idle Sessions</span>
+              <strong>{data.idleSessionCount}</strong>
+            </div>
+            <div className="telemetry-idling-summary-row">
+              <span>Risk Score</span>
+              <strong>{data.idlingRiskScore}/100</strong>
+            </div>
+          </div>
+          <div className={`telemetry-kpi-badge ${toneClass(getSeverityTone(data.idlingSeverity))}`}>
+            {data.idlingSeverity === 'critical' ? 'Critical' : data.idlingSeverity === 'warning' ? 'Warning' : 'Normal'}
+          </div>
+        </div>
+      </section>
+
+      <section className="telemetry-panel-grid">
+        <div className="card telemetry-panel">
+          <div className="telemetry-panel-head">
+            <div>
+              <div className="card-title">Speed Events Timeline</div>
+              <div className="telemetry-panel-subtitle">Recent high-signal speed events and driving activity timeline</div>
+            </div>
+          </div>
+          <div className="telemetry-events-list">
+            {data.speedEvents.length ? (
+              data.speedEvents.map((event) => (
+                <div key={`${event.label}-${event.details}`} className="telemetry-event-row">
+                  <span className={`telemetry-event-pill ${toneClass(event.tone)}`}>{event.label}</span>
+                  <div className="telemetry-event-copy">{event.details}</div>
+                </div>
+              ))
+            ) : (
+              <div className="telemetry-empty-state">No speed events were returned for this range.</div>
+            )}
+          </div>
+          <div className="telemetry-activity-chart">
+            <ResponsiveContainer width="100%" height={180}>
+              <BarChart data={data.activityTimeline}>
+                <XAxis dataKey="label" tickLine={false} axisLine={false} />
+                <YAxis tickLine={false} axisLine={false} width={42} />
+                <Tooltip content={<TooltipShell />} />
+                <Bar dataKey="durationMinutes" radius={[6, 6, 0, 0]} name="Duration (min)">
+                  {data.activityTimeline.map((entry) => (
+                    <Cell key={entry.label} fill={entry.tone === 'red' ? '#c92a2a' : entry.tone === 'yellow' ? '#d29b00' : '#0b8666'} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        <div className="card telemetry-panel">
+          <div className="telemetry-panel-head">
+            <div>
+              <div className="card-title">Ignition Trip Timeline</div>
+              <div className="telemetry-panel-subtitle">Trips derived from ignition on/off sessions with distance enrichment</div>
+            </div>
+          </div>
+          <div className="telemetry-table-wrap">
+            <table className="usage-billing-table telemetry-table">
+              <thead>
+                <tr>
+                  <th>Trip</th>
+                  <th>Ignition On</th>
+                  <th>Ignition Off</th>
+                  <th>Duration</th>
+                  <th>Distance</th>
+                  <th>Start Location</th>
+                  <th>End Location</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.tripSegments.length ? (
+                  visibleTrips.map((trip, index) => {
+                    const tripTone: TelemetryTone =
+                      trip.distanceKm >= 10 || trip.durationMinutes >= 30 ? 'red' : trip.distanceKm >= 4 ? 'yellow' : 'green';
+                    return (
+                      <tr key={trip.id}>
+                        <td style={{ fontFamily: 'var(--font-mono)' }}>#{index + 1}</td>
+                        <td>{formatDateTime(trip.startTime)}</td>
+                        <td>{formatDateTime(trip.endTime)}</td>
+                        <td style={{ fontFamily: 'var(--font-mono)' }}>{formatMinutes(trip.durationMinutes)}</td>
+                        <td>
+                          <span className={`telemetry-inline-pill ${toneClass(tripTone)}`}>{formatKm(trip.distanceKm)}</span>
+                        </td>
+                        <td>
+                          <ExactLocationCell latitude={trip.startLatitude} longitude={trip.startLongitude} />
+                        </td>
+                        <td>
+                          <ExactLocationCell latitude={trip.endLatitude} longitude={trip.endLongitude} />
+                        </td>
+                      </tr>
+                    );
+                  })
+                ) : (
+                  <tr>
+                    <td colSpan={7} className="telemetry-empty-table">
+                      No ignition trip sessions were returned for this range.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+          {hasMoreTrips ? (
+            <div className="telemetry-table-actions">
+              <button type="button" className="lookup-btn telemetry-show-more-btn" onClick={() => setVisibleTripCount((count) => count + 10)}>
+                Show more
+              </button>
+            </div>
+          ) : null}
+        </div>
+      </section>
+
+      {showIdlingDetails ? (
+        <div className="telemetry-modal-backdrop" onClick={() => setShowIdlingDetails(false)}>
+          <div className="card telemetry-modal" onClick={(event) => event.stopPropagation()}>
+            <div className="telemetry-panel-head">
+              <div>
+                <div className="card-title">Detailed Idling Events</div>
+                <div className="telemetry-panel-subtitle">Expanded on demand for operational review</div>
+              </div>
+              <button type="button" className="lookup-btn telemetry-detail-btn" onClick={() => setShowIdlingDetails(false)}>
+                Close
+              </button>
+            </div>
+            <div className="telemetry-idling-events">
+              {data.idlingSessions.map((session, index) => (
+                <div key={session.id} className="telemetry-idling-event">
+                  <div className="telemetry-summary-label">Idle Session #{index + 1}</div>
+                  <strong>{formatSeconds(session.durationSeconds)}</strong>
+                  <small>{formatDateTime(session.startTime)} to {formatDateTime(session.endTime)}</small>
+                  <div className="telemetry-location-pair">
+                    <ExactLocationCell latitude={session.startLatitude} longitude={session.startLongitude} />
+                    <ExactLocationCell latitude={session.endLatitude} longitude={session.endLongitude} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      ) : null}
     </>
   );
 }
@@ -556,7 +773,28 @@ export default function VehicleTelemetry() {
     }),
     [draftFilter.vehicleNumber, draftFilter.bbid, draftFilter.customerId]
   );
+  const previousFilter = useMemo(
+    () => ({
+      vehicleNumber: appliedFilter.vehicleNumber,
+      bbid: appliedFilter.bbid,
+      customerId: appliedFilter.customerId,
+      ...getPreviousPeriodRange(appliedFilter)
+    }),
+    [appliedFilter]
+  );
+  const allTimePreviousFilter = useMemo(
+    () => ({
+      vehicleNumber: allTimeFilter.vehicleNumber,
+      bbid: allTimeFilter.bbid,
+      customerId: allTimeFilter.customerId,
+      startDateTime: toDateTimeLocalValue(new Date(new Date(allTimeFilter.startDateTime).setFullYear(new Date(allTimeFilter.startDateTime).getFullYear() - 1))),
+      endDateTime: toDateTimeLocalValue(new Date(new Date(allTimeFilter.endDateTime).setFullYear(new Date(allTimeFilter.endDateTime).getFullYear() - 1)))
+    }),
+    [allTimeFilter]
+  );
   const allTimeTelemetry = useVehicleTelemetry(allTimeFilter);
+  const previousTelemetry = useVehicleTelemetry(previousFilter);
+  const allTimePreviousTelemetry = useVehicleTelemetry(allTimePreviousFilter);
 
   const dayNightChartData = telemetry.data
     ? [
@@ -754,6 +992,7 @@ export default function VehicleTelemetry() {
       {activeTab === 'all_time' && allTimeTelemetry.data ? (
         <TelemetryDashboardContent
           data={allTimeTelemetry.data}
+          previousData={allTimePreviousTelemetry.data}
           filter={allTimeFilter}
           dayNightChartData={allTimeDayNightChartData}
           behaviorIndicators={allTimeBehaviorIndicators}
@@ -763,6 +1002,7 @@ export default function VehicleTelemetry() {
       {activeTab === 'dashboard' && telemetry.data ? (
         <TelemetryDashboardContent
           data={telemetry.data}
+          previousData={previousTelemetry.data}
           filter={appliedFilter}
           dayNightChartData={dayNightChartData}
           behaviorIndicators={behaviorIndicators}

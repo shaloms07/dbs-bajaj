@@ -3446,6 +3446,115 @@ tbody td {
   gap: 16px;
 }
 
+.telemetry-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.telemetry-kpi-grid--two {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.telemetry-kpi-feature-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.telemetry-kpi-card {
+  min-width: 0;
+  display: grid;
+  gap: 14px;
+  align-content: start;
+}
+
+.telemetry-kpi-card-wide {
+  grid-column: span 3;
+}
+
+.telemetry-kpi-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: fit-content;
+  padding: 8px 12px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.telemetry-kpi-stat-grid,
+.telemetry-idling-mini-grid,
+.telemetry-idling-summary {
+  display: grid;
+  gap: 12px;
+}
+
+.telemetry-kpi-stat-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.telemetry-kpi-stat-grid span,
+.telemetry-idling-mini-grid span,
+.telemetry-idling-summary-row span {
+  display: block;
+  color: var(--text3);
+  font-size: 10px;
+  text-transform: uppercase;
+  font-family: var(--font-mono);
+  letter-spacing: 0.08em;
+}
+
+.telemetry-kpi-stat-grid strong,
+.telemetry-idling-mini-grid strong,
+.telemetry-idling-summary-row strong {
+  display: block;
+  margin-top: 4px;
+  color: var(--text);
+  font-size: 18px;
+  line-height: 1.35;
+}
+
+.telemetry-idling-mini-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.telemetry-kpi-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.telemetry-detail-btn {
+  min-height: 38px;
+}
+
+.telemetry-insights-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.telemetry-insight-card p {
+  margin: 0;
+  color: var(--text2);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.telemetry-section-header h2 {
+  margin: 4px 0 0;
+  font-size: 24px;
+  color: var(--text);
+}
+
+.telemetry-section-header-compact {
+  margin-top: 6px;
+}
+
 .telemetry-summary-card {
   min-height: 118px;
   display: grid;
@@ -3808,6 +3917,68 @@ tbody td {
   text-decoration: underline;
 }
 
+.telemetry-idling-summary-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(16, 35, 63, 0.08);
+}
+
+.telemetry-idling-summary-row:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.telemetry-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(11, 18, 34, 0.42);
+  backdrop-filter: blur(8px);
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  z-index: 50;
+}
+
+.telemetry-modal {
+  width: min(1040px, 100%);
+  max-height: calc(100vh - 48px);
+  overflow: auto;
+}
+
+.telemetry-idling-events {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.telemetry-idling-event {
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 16px;
+  display: grid;
+  gap: 8px;
+  background: linear-gradient(180deg, #ffffff 0%, #f9fbff 100%);
+}
+
+.telemetry-idling-event strong {
+  color: var(--text);
+  font-size: 20px;
+}
+
+.telemetry-idling-event small {
+  color: var(--text2);
+  line-height: 1.5;
+}
+
+.telemetry-location-pair {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
 .telemetry-empty-table {
   text-align: center;
   padding: 18px 20px;
@@ -3859,7 +4030,10 @@ tbody td {
 
 @media (max-width: 1200px) {
   .telemetry-loading-grid,
-  .telemetry-summary-grid {
+  .telemetry-summary-grid,
+  .telemetry-kpi-feature-grid,
+  .telemetry-kpi-grid,
+  .telemetry-insights-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
@@ -3868,13 +4042,24 @@ tbody td {
   .telemetry-chart-two-up {
     grid-template-columns: 1fr;
   }
+
+  .telemetry-kpi-card-wide {
+    grid-column: span 2;
+  }
 }
 
 @media (max-width: 760px) {
   .telemetry-loading-grid,
   .telemetry-summary-grid,
+  .telemetry-kpi-feature-grid,
   .telemetry-indicator-grid,
-  .telemetry-trip-route-grid {
+  .telemetry-trip-route-grid,
+  .telemetry-kpi-grid,
+  .telemetry-insights-grid,
+  .telemetry-kpi-stat-grid,
+  .telemetry-idling-mini-grid,
+  .telemetry-idling-events,
+  .telemetry-location-pair {
     grid-template-columns: 1fr;
   }
 
@@ -3902,6 +4087,10 @@ tbody td {
   .telemetry-hero,
   .telemetry-panel {
     padding: 20px;
+  }
+
+  .telemetry-kpi-card-wide {
+    grid-column: span 1;
   }
 
   .telemetry-table td,

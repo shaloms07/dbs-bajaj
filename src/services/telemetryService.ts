@@ -78,6 +78,19 @@ export interface OverspeedInstance {
   endLongitude: number | null;
 }
 
+export interface IdlingSession {
+  id: string;
+  startTime: string | null;
+  endTime: string | null;
+  durationSeconds: number;
+  startLocation: string;
+  endLocation: string;
+  startLatitude: number | null;
+  startLongitude: number | null;
+  endLatitude: number | null;
+  endLongitude: number | null;
+}
+
 export interface VehicleTelemetryData {
   vehicleNumber: string;
   bbid: string;
@@ -94,8 +107,10 @@ export interface VehicleTelemetryData {
   nightDrivingPct: number;
   urbanDrivingPct: number;
   ruralDrivingPct: number;
+  hillyDrivingPct: number;
   urbanDrivingKm: number;
   ruralDrivingKm: number;
+  hillyDrivingKm: number;
   totalTrips: number;
   cumulativeDistanceKm: number;
   speedTrend: Array<{ label: string; speed: number }>;
@@ -104,6 +119,17 @@ export interface VehicleTelemetryData {
   speedEvents: Array<{ label: string; tone: 'green' | 'yellow' | 'red'; details: string }>;
   speedLogs: TelemetrySpeedLog[];
   overspeedInstances: OverspeedInstance[];
+  overspeedSeverity: 'normal' | 'moderate' | 'high_risk';
+  totalIdlingMinutes: number;
+  totalIdlingSeconds: number;
+  ignitionCycles: number;
+  longestIdleSessionSeconds: number;
+  averageIdleSessionSeconds: number;
+  idleSessionCount: number;
+  idlingRiskScore: number;
+  idlingSeverity: 'normal' | 'warning' | 'critical';
+  idlingSessions: IdlingSession[];
+  insights: string[];
   tripSegments: TelemetryTripSegment[];
   behaviorIndicators: TelemetryBehaviorIndicator[];
   overspeedLimit: number;
@@ -147,6 +173,14 @@ type IgnitionSummaryRow = {
   TotalIgnitionTime?: string;
   bbid?: string;
   objIgnitionStatusReport?: unknown[];
+  [key: string]: unknown;
+};
+
+type IdlingSummaryRow = {
+  VehicleName?: string;
+  IgnitionOnOffCounter?: number | string;
+  TotalIdlingHours?: string;
+  objTravelReport?: unknown[];
   [key: string]: unknown;
 };
 
@@ -276,30 +310,48 @@ function parseDateValue(value: unknown) {
 }
 
 function parseDurationToMinutes(value: unknown) {
+  const totalSeconds = parseDurationToSeconds(value);
+  return Math.round(totalSeconds / 60);
+}
+
+function parseDurationToSeconds(value: unknown) {
   if (typeof value === 'number' && Number.isFinite(value)) return value;
   if (typeof value !== 'string') return 0;
 
   const raw = value.trim();
   if (!raw) return 0;
 
+  const dayHourMinuteSecondMatch = raw.match(
+    /(?:(\d+)\s*day\(s\))?[\s-]*(?:(\d+)\s*hour\(s\))?[:\s-]*(?:(\d+)\s*minute\(s\))?[:\s-]*(?:(\d+)\s*second\(s\))?/i
+  );
+  if (dayHourMinuteSecondMatch) {
+    const days = Number(dayHourMinuteSecondMatch[1] || 0);
+    const hours = Number(dayHourMinuteSecondMatch[2] || 0);
+    const minutes = Number(dayHourMinuteSecondMatch[3] || 0);
+    const seconds = Number(dayHourMinuteSecondMatch[4] || 0);
+    if (days || hours || minutes || seconds) {
+      return days * 24 * 60 * 60 + hours * 60 * 60 + minutes * 60 + seconds;
+    }
+  }
+
   const verboseMatch = raw.match(/(?:(\d+)\s*Hour\(s\))?\s*(?:(\d+)\s*Minute\(s\))?\s*(?:(\d+)\s*Second\(s\))?/i);
   if (verboseMatch) {
     const hours = Number(verboseMatch[1] || 0);
     const minutes = Number(verboseMatch[2] || 0);
     const seconds = Number(verboseMatch[3] || 0);
-    if (hours || minutes || seconds) return Math.round(hours * 60 + minutes + seconds / 60);
+    if (hours || minutes || seconds) return hours * 60 * 60 + minutes * 60 + seconds;
   }
 
   const hhmmssMatch = raw.match(/^(\d{2})-(\d{2}):(\d{2}):(\d{2})$/);
   if (hhmmssMatch) {
     const [, days, hours, minutes, seconds] = hhmmssMatch;
-    return Math.round(Number(days) * 24 * 60 + Number(hours) * 60 + Number(minutes) + Number(seconds) / 60);
+    return Number(days) * 24 * 60 * 60 + Number(hours) * 60 * 60 + Number(minutes) * 60 + Number(seconds);
   }
 
   const timeMatch = raw.match(/^(\d{1,2}):(\d{2}):(\d{2})$/);
   if (timeMatch) {
     const [, hours, minutes, seconds] = timeMatch;
-    return Math.round(Number(hours) * 60 + Number(minutes) + Number(seconds) / 60);
+    return Number(hours) * 60 * 60 + Number(minutes) * 60 + Number(seconds);
   }
 
   return 0;
@@ -613,6 +665,61 @@ async function fetchIgnitionReport(filter: TelemetryFilter) {
   return fetchTrackmasterResponse(buildTelemetryUrl('/ReportsApi/GetConsolidatedIgnitionStatus', params));
 }
 
+async function fetchIdlingReport(filter: TelemetryFilter) {
+  const params = new URLSearchParams({
+    sEcho: '1',
+    iColumns: '6',
+    sColumns: ',,,,,',
+    iDisplayStart: '0',
+    iDisplayLength: '20',
+    mDataProp_0: 'bbid',
+    sSearch_0: '',
+    bRegex_0: 'false',
+    bSearchable_0: 'true',
+    bSortable_0: 'true',
+    mDataProp_1: 'VehicleName',
+    sSearch_1: '',
+    bRegex_1: 'false',
+    bSearchable_1: 'true',
+    bSortable_1: 'true',
+    mDataProp_2: 'DriverName',
+    sSearch_2: '',
+    bRegex_2: 'false',
+    bSearchable_2: 'true',
+    bSortable_2: 'true',
+    mDataProp_3: 'IgnitionOnOffCounter',
+    sSearch_3: '',
+    bRegex_3: 'false',
+    bSearchable_3: 'true',
+    bSortable_3: 'true',
+    mDataProp_4: 'TotalIdlingHours',
+    sSearch_4: '',
+    bRegex_4: 'false',
+    bSearchable_4: 'true',
+    bSortable_4: 'true',
+    mDataProp_5: '',
+    sSearch_5: '',
+    bRegex_5: 'false',
+    bSearchable_5: 'true',
+    bSortable_5: 'false',
+    sSearch: '',
+    bRegex: 'false',
+    iSortCol_0: '0',
+    sSortDir_0: 'asc',
+    iSortingCols: '1',
+    bbid: filter.bbid,
+    beginDate: formatTrackmasterDate(filter.startDateTime),
+    endDate: formatTrackmasterDate(filter.endDateTime),
+    CustId: filter.customerId || trackmasterCustomerId,
+    downloadType: '',
+    reportName: '',
+    interval: '0-0',
+    _: String(Date.now())
+  });
+
+  return fetchTrackmasterResponse(buildTelemetryUrl('/ReportsApi/GetIdlingStatusReport', params));
+}
+
 function buildSpeedLogs(rows: unknown[], overspeedLimit: number) {
   return rows
     .map((row, index) => {
@@ -698,6 +805,36 @@ function buildIgnitionSessions(rows: unknown[]) {
       } satisfies IgnitionSession;
     })
     .filter((item) => item.startTime || item.endTime)
+    .sort((a, b) => (a.startTime || '').localeCompare(b.startTime || ''));
+}
+
+function buildIdlingSessions(rows: unknown[]) {
+  return rows
+    .map((row, index) => {
+      const item = normalizeRow(row);
+      const startTime = parseDateValue(item.StartDateTime ?? item.IgnitionOnTime ?? findValueByPatterns(item, ['starttime', 'fromdate', 'ignitionon']));
+      const endTime = parseDateValue(item.EndDateTime ?? item.IgnitionOffTime ?? findValueByPatterns(item, ['endtime', 'todate', 'ignitionoff']));
+      const sharedLocation = parseLocationValue(item.Location ?? findValueByPatterns(item, ['location', 'place', 'address', 'loc']));
+      const startLocation = parseLocationValue(item.StartLocation ?? item.SLocation ?? item.Location ?? findValueByPatterns(item, ['startlocation', 'fromlocation', 'origin']));
+      const endLocation = parseLocationValue(item.EndLocation ?? item.ELocation ?? item.Location ?? findValueByPatterns(item, ['endlocation', 'tolocation', 'destination']));
+      const durationSeconds =
+        parseDurationToSeconds(item.Duration ?? item.TotalIdlingHours ?? findValueByPatterns(item, ['duration', 'idlinghours', 'idletime'])) ||
+        (startTime && endTime ? Math.max((endTime.getTime() - startTime.getTime()) / 1000, 0) : 0);
+
+      return {
+        id: `${startTime?.toISOString() ?? 'idle'}-${index}`,
+        startTime: startTime?.toISOString() ?? null,
+        endTime: endTime?.toISOString() ?? null,
+        durationSeconds,
+        startLocation: startLocation.location,
+        endLocation: endLocation.location,
+        startLatitude: startLocation.latitude ?? sharedLocation.latitude,
+        startLongitude: startLocation.longitude ?? sharedLocation.longitude,
+        endLatitude: endLocation.latitude ?? sharedLocation.latitude,
+        endLongitude: endLocation.longitude ?? sharedLocation.longitude
+      } satisfies IdlingSession;
+    })
+    .filter((item) => item.durationSeconds > 0 || item.startTime || item.endTime)
     .sort((a, b) => (a.startTime || '').localeCompare(b.startTime || ''));
 }
 
@@ -903,6 +1040,106 @@ function buildBehaviorIndicators(
   ] satisfies TelemetryBehaviorIndicator[];
 }
 
+function getOverspeedSeverity(overspeedCount: number, maxSpeed: number, overspeedDurationMinutes: number) {
+  if (overspeedCount >= 10 || maxSpeed >= 90 || overspeedDurationMinutes >= 15) return 'high_risk' as const;
+  if (overspeedCount >= 3 || maxSpeed >= 70 || overspeedDurationMinutes >= 3) return 'moderate' as const;
+  return 'normal' as const;
+}
+
+function buildIdlingAnalytics(idlingSummary: IdlingSummaryRow, idlingSessions: IdlingSession[]) {
+  const ignitionCycles = Math.round(toNumber(idlingSummary.IgnitionOnOffCounter, 0));
+  const derivedTotalSeconds = idlingSessions.reduce((sum, session) => sum + session.durationSeconds, 0);
+  const totalIdlingSeconds = parseDurationToSeconds(idlingSummary.TotalIdlingHours) || derivedTotalSeconds;
+  const longestIdleSessionSeconds = idlingSessions.reduce((max, session) => Math.max(max, session.durationSeconds), 0);
+  const idleSessionCount = idlingSessions.length;
+  const averageIdleSessionSeconds = idleSessionCount ? Math.round(totalIdlingSeconds / idleSessionCount) : 0;
+
+  const scoreFromTotal = Math.min((totalIdlingSeconds / (15 * 60)) * 45, 45);
+  const scoreFromLongest = Math.min((longestIdleSessionSeconds / (5 * 60)) * 30, 30);
+  const scoreFromCycles = Math.min((ignitionCycles / 20) * 15, 15);
+  const scoreFromCount = Math.min((idleSessionCount / 10) * 10, 10);
+  const idlingRiskScore = Math.round(Math.min(scoreFromTotal + scoreFromLongest + scoreFromCycles + scoreFromCount, 100));
+
+  let idlingSeverity: VehicleTelemetryData['idlingSeverity'] = 'normal';
+  if (totalIdlingSeconds > 30 * 60 || longestIdleSessionSeconds > 10 * 60 || ignitionCycles > 30 || idlingRiskScore >= 70) {
+    idlingSeverity = 'critical';
+  } else if (totalIdlingSeconds > 15 * 60 || longestIdleSessionSeconds > 5 * 60 || ignitionCycles > 20 || idlingRiskScore >= 35) {
+    idlingSeverity = 'warning';
+  }
+
+  return {
+    ignitionCycles,
+    totalIdlingSeconds,
+    totalIdlingMinutes: Math.round(totalIdlingSeconds / 60),
+    longestIdleSessionSeconds,
+    averageIdleSessionSeconds,
+    idleSessionCount,
+    idlingRiskScore,
+    idlingSeverity
+  };
+}
+
+function buildInsights(data: {
+  totalIdlingMinutes: number;
+  ignitionCycles: number;
+  dayDrivingKm: number;
+  nightDrivingKm: number;
+  urbanDrivingPct: number;
+  ruralDrivingPct: number;
+  hillyDrivingPct: number;
+  overspeedCount: number;
+  overspeedSeverity: VehicleTelemetryData['overspeedSeverity'];
+  idlingSeverity: VehicleTelemetryData['idlingSeverity'];
+}) {
+  const insights: string[] = [];
+
+  if (data.totalIdlingMinutes <= 5) {
+    insights.push(`Vehicle spent only ${data.totalIdlingMinutes} minutes idling. Fuel wastage risk is low.`);
+  } else if (data.totalIdlingMinutes <= 15) {
+    insights.push(`Vehicle idled for ${data.totalIdlingMinutes} minutes. Monitoring is advisable if this pattern continues.`);
+  } else {
+    insights.push(`Vehicle idled for ${data.totalIdlingMinutes} minutes. Fuel and utilization impact is elevated.`);
+  }
+
+  if (data.ignitionCycles <= 8) {
+    insights.push(`Vehicle experienced ${data.ignitionCycles} ignition cycles, which is within a healthy operating range.`);
+  } else if (data.ignitionCycles <= 20) {
+    insights.push(`Vehicle experienced ${data.ignitionCycles} ignition cycles, showing moderate start-stop activity.`);
+  } else {
+    insights.push(`Vehicle experienced ${data.ignitionCycles} ignition cycles, indicating frequent stop-start behavior.`);
+  }
+
+  if (data.dayDrivingKm >= data.nightDrivingKm) {
+    insights.push('Most driving occurred during daytime.');
+  } else {
+    insights.push('Night driving exceeded daytime travel in the selected period.');
+  }
+
+  if (data.hillyDrivingPct > 0) {
+    insights.push(`Hilly terrain accounted for ${data.hillyDrivingPct.toFixed(1)}% of travel.`);
+  } else if (data.urbanDrivingPct >= data.ruralDrivingPct) {
+    insights.push(`Urban driving accounted for ${data.urbanDrivingPct.toFixed(1)}% of total travel.`);
+  } else {
+    insights.push(`Rural driving accounted for ${data.ruralDrivingPct.toFixed(1)}% of total travel.`);
+  }
+
+  if (data.overspeedCount === 0) {
+    insights.push('Overspeeding events were not detected.');
+  } else if (data.overspeedSeverity === 'high_risk') {
+    insights.push('Overspeeding patterns suggest high-risk driver behavior.');
+  } else {
+    insights.push(`Overspeeding events were detected ${data.overspeedCount} time(s), but severity remained ${data.overspeedSeverity}.`);
+  }
+
+  if (data.idlingSeverity === 'normal' && data.overspeedSeverity === 'normal') {
+    insights.push('Vehicle shows healthy operational behavior.');
+  } else if (data.idlingSeverity === 'critical' || data.overspeedSeverity === 'high_risk') {
+    insights.push('Vehicle utilization requires attention due to elevated operational risk.');
+  }
+
+  return insights;
+}
+
 function buildOverspeedInstances(logs: TelemetrySpeedLog[], overspeedLimit: number, reportedDurationMinutes = 0) {
   const instances: OverspeedInstance[] = [];
 
@@ -1045,22 +1282,25 @@ export function getDefaultTelemetryFilter(): TelemetryFilter {
 }
 
 export async function fetchVehicleTelemetry(filter: TelemetryFilter): Promise<VehicleTelemetryData> {
-  const [speedResponse, overSpeedResponse, distanceResponse, ignitionResponse] = await Promise.all([
+  const [speedResponse, overSpeedResponse, distanceResponse, ignitionResponse, idlingResponse] = await Promise.all([
     fetchSpeedReport(filter),
     fetchOverSpeedReport(filter),
     fetchDistanceReport(filter),
-    fetchIgnitionReport(filter)
+    fetchIgnitionReport(filter),
+    fetchIdlingReport(filter)
   ]);
   const speedSummary = normalizeRow(speedResponse?.aaData?.[0]) as SpeedSummaryRow;
   const overSpeedSummary = normalizeRow(overSpeedResponse?.aaData?.[0]) as SpeedSummaryRow;
   const distanceSummary = normalizeRow(distanceResponse?.aaData?.[0]) as DistanceSummaryRow;
   const ignitionSummary = normalizeRow(ignitionResponse?.aaData?.[0]) as IgnitionSummaryRow;
+  const idlingSummary = normalizeRow(idlingResponse?.aaData?.[0]) as IdlingSummaryRow;
   const aggregateTrendByDay = getRangeDays(filter) > 3;
   const overspeedLimit = toNumber(overSpeedSummary.overspeedLimit, toNumber(speedSummary.overspeedLimit, 60));
   const speedRows = buildSpeedLogs(Array.isArray(speedSummary.overSpeedData) ? speedSummary.overSpeedData : [], overspeedLimit);
   const overSpeedRows = buildSpeedLogs(Array.isArray(overSpeedSummary.overSpeedData) ? overSpeedSummary.overSpeedData : [], overspeedLimit);
   const distanceTripSegments = buildTripSegments(Array.isArray(distanceSummary.objTravelReport) ? distanceSummary.objTravelReport : []);
   const ignitionSessions = buildIgnitionSessions(Array.isArray(ignitionSummary.objIgnitionStatusReport) ? ignitionSummary.objIgnitionStatusReport : []);
+  const idlingSessions = buildIdlingSessions(Array.isArray(idlingSummary.objTravelReport) ? idlingSummary.objTravelReport : []);
   const tripSegments = ignitionSessions.length ? buildTripsFromIgnitionSessions(ignitionSessions, distanceTripSegments) : distanceTripSegments;
 
   const derivedTotalDistanceKm = Number(distanceTripSegments.reduce((sum, trip) => sum + trip.distanceKm, 0).toFixed(2));
@@ -1084,6 +1324,8 @@ export async function fetchVehicleTelemetry(filter: TelemetryFilter): Promise<Ve
   );
   const overspeedDurationMinutes = parseDurationToMinutes(overSpeedSummary.overSpeedDuration);
   const overspeedInstances = buildOverspeedInstances(overSpeedRows, overspeedLimit, overspeedDurationMinutes);
+  const overspeedSeverity = getOverspeedSeverity(overspeedCount, maxSpeed, overspeedDurationMinutes);
+  const idlingAnalytics = buildIdlingAnalytics(idlingSummary, idlingSessions);
   const { dayMinutes, nightMinutes, dayKm, nightKm } = deriveDayNightFromTrips(tripSegments, speedRows);
   const effectiveDuration = Math.max(totalDrivingDurationMinutes, dayMinutes + nightMinutes, 1);
   const dayDrivingPct = Number(((dayMinutes / effectiveDuration) * 100).toFixed(1));
@@ -1093,6 +1335,18 @@ export async function fetchVehicleTelemetry(filter: TelemetryFilter): Promise<Ve
   const activityTimeline = buildActivityTimeline(tripSegments);
   const speedEvents = buildSpeedEvents(overSpeedRows.length ? overSpeedRows : speedRows);
   const behaviorIndicators = buildBehaviorIndicators(totalDistanceKm, tripSegments.length, maxSpeed, overspeedCount);
+  const insights = buildInsights({
+    totalIdlingMinutes: idlingAnalytics.totalIdlingMinutes,
+    ignitionCycles: idlingAnalytics.ignitionCycles,
+    dayDrivingKm: Number(dayKm.toFixed(2)),
+    nightDrivingKm: Number(nightKm.toFixed(2)),
+    urbanDrivingPct: 100,
+    ruralDrivingPct: 0,
+    hillyDrivingPct: 0,
+    overspeedCount,
+    overspeedSeverity,
+    idlingSeverity: idlingAnalytics.idlingSeverity
+  });
 
   return {
     vehicleNumber: filter.vehicleNumber,
@@ -1110,8 +1364,10 @@ export async function fetchVehicleTelemetry(filter: TelemetryFilter): Promise<Ve
     nightDrivingPct,
     urbanDrivingPct: 100,
     ruralDrivingPct: 0,
+    hillyDrivingPct: 0,
     urbanDrivingKm: totalDistanceKm,
     ruralDrivingKm: 0,
+    hillyDrivingKm: 0,
     totalTrips: Math.round(toNumber(ignitionSummary.IgnitionOnOffCounter, toNumber(distanceSummary.dataCount, tripSegments.length))),
     cumulativeDistanceKm: distanceTrend.at(-1)?.distanceKm ?? totalDistanceKm,
     speedTrend,
@@ -1120,6 +1376,17 @@ export async function fetchVehicleTelemetry(filter: TelemetryFilter): Promise<Ve
     speedEvents,
     speedLogs: speedRows.slice(-12).reverse(),
     overspeedInstances,
+    overspeedSeverity,
+    totalIdlingMinutes: idlingAnalytics.totalIdlingMinutes,
+    totalIdlingSeconds: idlingAnalytics.totalIdlingSeconds,
+    ignitionCycles: idlingAnalytics.ignitionCycles,
+    longestIdleSessionSeconds: idlingAnalytics.longestIdleSessionSeconds,
+    averageIdleSessionSeconds: idlingAnalytics.averageIdleSessionSeconds,
+    idleSessionCount: idlingAnalytics.idleSessionCount,
+    idlingRiskScore: idlingAnalytics.idlingRiskScore,
+    idlingSeverity: idlingAnalytics.idlingSeverity,
+    idlingSessions,
+    insights,
     tripSegments,
     behaviorIndicators,
     overspeedLimit
