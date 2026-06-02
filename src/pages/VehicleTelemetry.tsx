@@ -267,35 +267,33 @@ function TelemetryDashboardContent({
               <div className="telemetry-panel-subtitle">Default terrain mix, ready for future terrain enrichment</div>
             </div>
           </div>
-          <div className="telemetry-chart-two-up">
-            <div className="telemetry-chart-wrap">
-              <ResponsiveContainer width="100%" height={220}>
-                <PieChart>
-                  <Pie data={terrainChartData} dataKey="value" nameKey="name" innerRadius={58} outerRadius={82} paddingAngle={3}>
-                    {terrainChartData.map((entry) => (
-                      <Cell key={entry.name} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip content={<TooltipShell />} />
-                </PieChart>
-              </ResponsiveContainer>
+          <div className="telemetry-chart-wrap">
+            <ResponsiveContainer width="100%" height={220}>
+              <PieChart>
+                <Pie data={terrainChartData} dataKey="value" nameKey="name" innerRadius={58} outerRadius={82} paddingAngle={3}>
+                  {terrainChartData.map((entry) => (
+                    <Cell key={entry.name} fill={entry.color} />
+                  ))}
+                </Pie>
+                <Tooltip content={<TooltipShell />} />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+          <div className="telemetry-side-metrics telemetry-side-metrics--three-up">
+            <div className="telemetry-side-metric">
+              <span>Urban</span>
+              <strong>{formatPercent(data.urbanDrivingPct)}</strong>
+              <small>{formatKm(data.urbanDrivingKm)}</small>
             </div>
-            <div className="telemetry-side-metrics">
-              <div className="telemetry-side-metric">
-                <span>Urban</span>
-                <strong>{formatPercent(data.urbanDrivingPct)}</strong>
-                <small>{formatKm(data.urbanDrivingKm)}</small>
-              </div>
-              <div className="telemetry-side-metric">
-                <span>Rural</span>
-                <strong>{formatPercent(data.ruralDrivingPct)}</strong>
-                <small>{formatKm(data.ruralDrivingKm)}</small>
-              </div>
-              <div className="telemetry-side-metric">
-                <span>Hilly</span>
-                <strong>{formatPercent(data.hillyDrivingPct)}</strong>
-                <small>{formatKm(data.hillyDrivingKm)}</small>
-              </div>
+            <div className="telemetry-side-metric">
+              <span>Rural</span>
+              <strong>{formatPercent(data.ruralDrivingPct)}</strong>
+              <small>{formatKm(data.ruralDrivingKm)}</small>
+            </div>
+            <div className="telemetry-side-metric">
+              <span>Hilly</span>
+              <strong>{formatPercent(data.hillyDrivingPct)}</strong>
+              <small>{formatKm(data.hillyDrivingKm)}</small>
             </div>
           </div>
         </div>
@@ -378,43 +376,41 @@ function TelemetryDashboardContent({
         </div>
       </section>
 
-      <section className="telemetry-panel-grid">
-        <div className="card telemetry-panel">
-          <div className="telemetry-panel-head">
-            <div>
-              <div className="card-title">Speed Trend</div>
-              <div className="telemetry-panel-subtitle">Time-wise for short ranges, daily average speed for longer ranges</div>
-            </div>
-          </div>
-          <div className="telemetry-chart-wrap">
-            <ResponsiveContainer width="100%" height={260}>
-              <LineChart data={data.speedTrend}>
-                <XAxis dataKey="label" tickLine={false} axisLine={false} />
-                <YAxis tickLine={false} axisLine={false} width={42} />
-                <Tooltip content={<TooltipShell />} />
-                <Line type="monotone" dataKey="speed" stroke="#005dac" strokeWidth={3} dot={false} name="Speed (km/h)" />
-              </LineChart>
-            </ResponsiveContainer>
+      <section className="card telemetry-panel">
+        <div className="telemetry-panel-head">
+          <div>
+            <div className="card-title">Speed Trend</div>
+            <div className="telemetry-panel-subtitle">Time-wise for short ranges, daily average speed for longer ranges</div>
           </div>
         </div>
+        <div className="telemetry-chart-wrap">
+          <ResponsiveContainer width="100%" height={260}>
+            <LineChart data={data.speedTrend}>
+              <XAxis dataKey="label" tickLine={false} axisLine={false} />
+              <YAxis tickLine={false} axisLine={false} width={42} />
+              <Tooltip content={<TooltipShell />} />
+              <Line type="monotone" dataKey="speed" stroke="#005dac" strokeWidth={3} dot={false} name="Speed (km/h)" />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      </section>
 
-        <div className="card telemetry-panel">
-          <div className="telemetry-panel-head">
-            <div>
-              <div className="card-title">Distance Trend</div>
-              <div className="telemetry-panel-subtitle">Trip-wise for short ranges, daily distance driven for longer ranges</div>
-            </div>
+      <section className="card telemetry-panel">
+        <div className="telemetry-panel-head">
+          <div>
+            <div className="card-title">Distance Trend</div>
+            <div className="telemetry-panel-subtitle">Trip-wise for short ranges, daily distance driven for longer ranges</div>
           </div>
-          <div className="telemetry-chart-wrap">
-            <ResponsiveContainer width="100%" height={260}>
-              <AreaChart data={data.distanceTrend}>
-                <XAxis dataKey="label" tickLine={false} axisLine={false} />
-                <YAxis tickLine={false} axisLine={false} width={52} />
-                <Tooltip content={<TooltipShell />} />
-                <Area type="monotone" dataKey="distanceKm" stroke="#0b8666" fill="rgba(11, 134, 102, 0.18)" name="Distance (km)" />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
+        </div>
+        <div className="telemetry-chart-wrap">
+          <ResponsiveContainer width="100%" height={260}>
+            <AreaChart data={data.distanceTrend}>
+              <XAxis dataKey="label" tickLine={false} axisLine={false} />
+              <YAxis tickLine={false} axisLine={false} width={52} />
+              <Tooltip content={<TooltipShell />} />
+              <Area type="monotone" dataKey="distanceKm" stroke="#0b8666" fill="rgba(11, 134, 102, 0.18)" name="Distance (km)" />
+            </AreaChart>
+          </ResponsiveContainer>
         </div>
       </section>
 
@@ -613,10 +609,6 @@ function TelemetryDashboardContent({
               <span>Idle Sessions</span>
               <strong>{data.idleSessionCount}</strong>
             </div>
-            <div className="telemetry-idling-summary-row">
-              <span>Risk Score</span>
-              <strong>{data.idlingRiskScore}/100</strong>
-            </div>
           </div>
           <div className={`telemetry-kpi-badge ${toneClass(getSeverityTone(data.idlingSeverity))}`}>
             {data.idlingSeverity === 'critical' ? 'Critical' : data.idlingSeverity === 'warning' ? 'Warning' : 'Normal'}
@@ -624,103 +616,101 @@ function TelemetryDashboardContent({
         </div>
       </section>
 
-      <section className="telemetry-panel-grid">
-        <div className="card telemetry-panel">
-          <div className="telemetry-panel-head">
-            <div>
-              <div className="card-title">Speed Events Timeline</div>
-              <div className="telemetry-panel-subtitle">Recent high-signal speed events and driving activity timeline</div>
-            </div>
-          </div>
-          <div className="telemetry-events-list">
-            {data.speedEvents.length ? (
-              data.speedEvents.map((event) => (
-                <div key={`${event.label}-${event.details}`} className="telemetry-event-row">
-                  <span className={`telemetry-event-pill ${toneClass(event.tone)}`}>{event.label}</span>
-                  <div className="telemetry-event-copy">{event.details}</div>
-                </div>
-              ))
-            ) : (
-              <div className="telemetry-empty-state">No speed events were returned for this range.</div>
-            )}
-          </div>
-          <div className="telemetry-activity-chart">
-            <ResponsiveContainer width="100%" height={180}>
-              <BarChart data={data.activityTimeline}>
-                <XAxis dataKey="label" tickLine={false} axisLine={false} />
-                <YAxis tickLine={false} axisLine={false} width={42} />
-                <Tooltip content={<TooltipShell />} />
-                <Bar dataKey="durationMinutes" radius={[6, 6, 0, 0]} name="Duration (min)">
-                  {data.activityTimeline.map((entry) => (
-                    <Cell key={entry.label} fill={entry.tone === 'red' ? '#c92a2a' : entry.tone === 'yellow' ? '#d29b00' : '#0b8666'} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
+      <section className="card telemetry-panel">
+        <div className="telemetry-panel-head">
+          <div>
+            <div className="card-title">Speed Events Timeline</div>
+            <div className="telemetry-panel-subtitle">Recent high-signal speed events and driving activity timeline</div>
           </div>
         </div>
+        <div className="telemetry-events-list">
+          {data.speedEvents.length ? (
+            data.speedEvents.map((event) => (
+              <div key={`${event.label}-${event.details}`} className="telemetry-event-row">
+                <span className={`telemetry-event-pill ${toneClass(event.tone)}`}>{event.label}</span>
+                <div className="telemetry-event-copy">{event.details}</div>
+              </div>
+            ))
+          ) : (
+            <div className="telemetry-empty-state">No speed events were returned for this range.</div>
+          )}
+        </div>
+        <div className="telemetry-activity-chart">
+          <ResponsiveContainer width="100%" height={180}>
+            <BarChart data={data.activityTimeline}>
+              <XAxis dataKey="label" tickLine={false} axisLine={false} />
+              <YAxis tickLine={false} axisLine={false} width={42} />
+              <Tooltip content={<TooltipShell />} />
+              <Bar dataKey="durationMinutes" radius={[6, 6, 0, 0]} name="Duration (min)">
+                {data.activityTimeline.map((entry) => (
+                  <Cell key={entry.label} fill={entry.tone === 'red' ? '#c92a2a' : entry.tone === 'yellow' ? '#d29b00' : '#0b8666'} />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </section>
 
-        <div className="card telemetry-panel">
-          <div className="telemetry-panel-head">
-            <div>
-              <div className="card-title">Ignition Trip Timeline</div>
-              <div className="telemetry-panel-subtitle">Trips derived from ignition on/off sessions with distance enrichment</div>
-            </div>
+      <section className="card telemetry-panel">
+        <div className="telemetry-panel-head">
+          <div>
+            <div className="card-title">Ignition Trip Timeline</div>
+            <div className="telemetry-panel-subtitle">Trips derived from ignition on/off sessions with distance enrichment</div>
           </div>
-          <div className="telemetry-table-wrap">
-            <table className="usage-billing-table telemetry-table">
-              <thead>
-                <tr>
-                  <th>Trip</th>
-                  <th>Ignition On</th>
-                  <th>Ignition Off</th>
-                  <th>Duration</th>
-                  <th>Distance</th>
-                  <th>Start Location</th>
-                  <th>End Location</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.tripSegments.length ? (
-                  visibleTrips.map((trip, index) => {
-                    const tripTone: TelemetryTone =
-                      trip.distanceKm >= 10 || trip.durationMinutes >= 30 ? 'red' : trip.distanceKm >= 4 ? 'yellow' : 'green';
-                    return (
-                      <tr key={trip.id}>
-                        <td style={{ fontFamily: 'var(--font-mono)' }}>#{index + 1}</td>
-                        <td>{formatDateTime(trip.startTime)}</td>
-                        <td>{formatDateTime(trip.endTime)}</td>
-                        <td style={{ fontFamily: 'var(--font-mono)' }}>{formatMinutes(trip.durationMinutes)}</td>
-                        <td>
-                          <span className={`telemetry-inline-pill ${toneClass(tripTone)}`}>{formatKm(trip.distanceKm)}</span>
-                        </td>
-                        <td>
-                          <ExactLocationCell latitude={trip.startLatitude} longitude={trip.startLongitude} />
-                        </td>
-                        <td>
-                          <ExactLocationCell latitude={trip.endLatitude} longitude={trip.endLongitude} />
-                        </td>
-                      </tr>
-                    );
-                  })
-                ) : (
-                  <tr>
-                    <td colSpan={7} className="telemetry-empty-table">
-                      No ignition trip sessions were returned for this range.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-          {hasMoreTrips ? (
-            <div className="telemetry-table-actions">
-              <button type="button" className="lookup-btn telemetry-show-more-btn" onClick={() => setVisibleTripCount((count) => count + 10)}>
-                Show more
-              </button>
-            </div>
-          ) : null}
         </div>
+        <div className="telemetry-table-wrap">
+          <table className="usage-billing-table telemetry-table">
+            <thead>
+              <tr>
+                <th>Trip</th>
+                <th>Ignition On</th>
+                <th>Ignition Off</th>
+                <th>Duration</th>
+                <th>Distance</th>
+                <th>Start Location</th>
+                <th>End Location</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.tripSegments.length ? (
+                visibleTrips.map((trip, index) => {
+                  const tripTone: TelemetryTone =
+                    trip.distanceKm >= 10 || trip.durationMinutes >= 30 ? 'red' : trip.distanceKm >= 4 ? 'yellow' : 'green';
+                  return (
+                    <tr key={trip.id}>
+                      <td style={{ fontFamily: 'var(--font-mono)' }}>#{index + 1}</td>
+                      <td>{formatDateTime(trip.startTime)}</td>
+                      <td>{formatDateTime(trip.endTime)}</td>
+                      <td style={{ fontFamily: 'var(--font-mono)' }}>{formatMinutes(trip.durationMinutes)}</td>
+                      <td>
+                        <span className={`telemetry-inline-pill ${toneClass(tripTone)}`}>{formatKm(trip.distanceKm)}</span>
+                      </td>
+                      <td>
+                        <ExactLocationCell latitude={trip.startLatitude} longitude={trip.startLongitude} />
+                      </td>
+                      <td>
+                        <ExactLocationCell latitude={trip.endLatitude} longitude={trip.endLongitude} />
+                      </td>
+                    </tr>
+                  );
+                })
+              ) : (
+                <tr>
+                  <td colSpan={7} className="telemetry-empty-table">
+                    No ignition trip sessions were returned for this range.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+        {hasMoreTrips ? (
+          <div className="telemetry-table-actions">
+            <button type="button" className="lookup-btn telemetry-show-more-btn" onClick={() => setVisibleTripCount((count) => count + 10)}>
+              Show more
+            </button>
+          </div>
+        ) : null}
       </section>
 
       {showIdlingDetails ? (

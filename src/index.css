@@ -3640,6 +3640,11 @@ tbody td {
   gap: 10px;
 }
 
+.telemetry-side-metrics--three-up {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-top: 12px;
+}
+
 .telemetry-side-metric,
 .telemetry-indicator-card,
 .telemetry-trip-card {
@@ -4040,6 +4045,10 @@ tbody td {
   .telemetry-panel-grid,
   .telemetry-filter-grid,
   .telemetry-chart-two-up {
+    grid-template-columns: 1fr;
+  }
+
+  .telemetry-side-metrics--three-up {
     grid-template-columns: 1fr;
   }
 
