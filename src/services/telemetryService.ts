@@ -1261,6 +1261,143 @@ function deriveDayNightFromTrips(trips: TelemetryTripSegment[], logs: TelemetryS
   return { dayMinutes: 0, nightMinutes: 0, dayKm: 0, nightKm: 0 };
 }
 
+const URBAN_LOCATION_KEYWORDS = [
+  'road',
+  'street',
+  'nagar',
+  'colony',
+  'sector',
+  'phase',
+  'market',
+  'bazar',
+  'bazaar',
+  'city',
+  'town',
+  'hospital',
+  'school',
+  'mall',
+  'chowk',
+  'junction',
+  'station',
+  'metro',
+  'society',
+  'apartment',
+  'industrial'
+];
+
+const RURAL_LOCATION_KEYWORDS = [
+  'village',
+  'gaon',
+  'farm',
+  'kalan',
+  'khurd',
+  'chak',
+  'patti',
+  'purwa',
+  'khera',
+  'tehsil',
+  'post',
+  'district',
+  'taluka'
+];
+
+const HILLY_LOCATION_KEYWORDS = ['hill', 'hills', 'ghat', 'ghati', 'mount', 'mountain', 'valley'];
+
+function countKeywordMatches(text: string, keywords: string[]) {
+  return keywords.reduce((count, keyword) => (text.includes(keyword) ? count + 1 : count), 0);
+}
+
+function normalizeLocationText(...values: Array<string | null | undefined>) {
+  return values
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function classifyTerrainWeightsForTrip(trip: TelemetryTripSegment) {
+  const locationText = normalizeLocationText(trip.startLocation, trip.endLocation);
+  const urbanHints = countKeywordMatches(locationText, URBAN_LOCATION_KEYWORDS);
+  const ruralHints = countKeywordMatches(locationText, RURAL_LOCATION_KEYWORDS);
+  const hillyHints = countKeywordMatches(locationText, HILLY_LOCATION_KEYWORDS);
+  const avgSpeed = trip.durationMinutes > 0 ? trip.distanceKm / Math.max(trip.durationMinutes / 60, 0.25) : 0;
+
+  let urbanScore = 0;
+  let ruralScore = 0;
+  let hillyScore = 0;
+
+  urbanScore += urbanHints * 1.5;
+  ruralScore += ruralHints * 1.5;
+  hillyScore += hillyHints * 2;
+
+  if (avgSpeed > 0) {
+    if (avgSpeed <= 28) {
+      urbanScore += 2;
+    } else if (avgSpeed >= 42) {
+      ruralScore += 2;
+    } else {
+      urbanScore += 1;
+      ruralScore += 1;
+    }
+  }
+
+  if (trip.distanceKm <= 8) urbanScore += 1;
+  if (trip.distanceKm >= 35) ruralScore += 1;
+  if (trip.durationMinutes <= 20) urbanScore += 0.5;
+  if (trip.durationMinutes >= 90) ruralScore += 0.5;
+
+  if (!urbanScore && !ruralScore && !hillyScore) {
+    urbanScore = 1;
+  }
+
+  const total = urbanScore + ruralScore + hillyScore;
+  return {
+    urban: total ? urbanScore / total : 1,
+    rural: total ? ruralScore / total : 0,
+    hilly: total ? hillyScore / total : 0
+  };
+}
+
+function deriveTerrainMixFromTrips(trips: TelemetryTripSegment[], totalDistanceKm: number) {
+  if (!trips.length || totalDistanceKm <= 0) {
+    return {
+      urbanDrivingKm: totalDistanceKm,
+      ruralDrivingKm: 0,
+      hillyDrivingKm: 0,
+      urbanDrivingPct: totalDistanceKm > 0 ? 100 : 0,
+      ruralDrivingPct: 0,
+      hillyDrivingPct: 0
+    };
+  }
+
+  const totals = trips.reduce(
+    (acc, trip) => {
+      const weights = classifyTerrainWeightsForTrip(trip);
+      acc.urbanDrivingKm += trip.distanceKm * weights.urban;
+      acc.ruralDrivingKm += trip.distanceKm * weights.rural;
+      acc.hillyDrivingKm += trip.distanceKm * weights.hilly;
+      return acc;
+    },
+    { urbanDrivingKm: 0, ruralDrivingKm: 0, hillyDrivingKm: 0 }
+  );
+
+  const normalizedTotal = Math.max(totals.urbanDrivingKm + totals.ruralDrivingKm + totals.hillyDrivingKm, 0.01);
+  const urbanDrivingKm = Number(totals.urbanDrivingKm.toFixed(2));
+  const ruralDrivingKm = Number(totals.ruralDrivingKm.toFixed(2));
+  const hillyDrivingKm = Number(totals.hillyDrivingKm.toFixed(2));
+
+  return {
+    urbanDrivingKm,
+    ruralDrivingKm,
+    hillyDrivingKm,
+    urbanDrivingPct: Number(((urbanDrivingKm / normalizedTotal) * 100).toFixed(1)),
+    ruralDrivingPct: Number(((ruralDrivingKm / normalizedTotal) * 100).toFixed(1)),
+    hillyDrivingPct: Number(((hillyDrivingKm / normalizedTotal) * 100).toFixed(1))
+  };
+}
+
 export function getTelemetryVehicles() {
   return TELEMETRY_VEHICLES;
 }
@@ -1327,6 +1464,7 @@ export async function fetchVehicleTelemetry(filter: TelemetryFilter): Promise<Ve
   const overspeedSeverity = getOverspeedSeverity(overspeedCount, maxSpeed, overspeedDurationMinutes);
   const idlingAnalytics = buildIdlingAnalytics(idlingSummary, idlingSessions);
   const { dayMinutes, nightMinutes, dayKm, nightKm } = deriveDayNightFromTrips(tripSegments, speedRows);
+  const terrainMix = deriveTerrainMixFromTrips(tripSegments, totalDistanceKm);
   const effectiveDuration = Math.max(totalDrivingDurationMinutes, dayMinutes + nightMinutes, 1);
   const dayDrivingPct = Number(((dayMinutes / effectiveDuration) * 100).toFixed(1));
   const nightDrivingPct = Number(((nightMinutes / effectiveDuration) * 100).toFixed(1));
@@ -1340,9 +1478,9 @@ export async function fetchVehicleTelemetry(filter: TelemetryFilter): Promise<Ve
     ignitionCycles: idlingAnalytics.ignitionCycles,
     dayDrivingKm: Number(dayKm.toFixed(2)),
     nightDrivingKm: Number(nightKm.toFixed(2)),
-    urbanDrivingPct: 100,
-    ruralDrivingPct: 0,
-    hillyDrivingPct: 0,
+    urbanDrivingPct: terrainMix.urbanDrivingPct,
+    ruralDrivingPct: terrainMix.ruralDrivingPct,
+    hillyDrivingPct: terrainMix.hillyDrivingPct,
     overspeedCount,
     overspeedSeverity,
     idlingSeverity: idlingAnalytics.idlingSeverity
@@ -1362,12 +1500,12 @@ export async function fetchVehicleTelemetry(filter: TelemetryFilter): Promise<Ve
     nightDrivingKm: Number(nightKm.toFixed(2)),
     dayDrivingPct,
     nightDrivingPct,
-    urbanDrivingPct: 100,
-    ruralDrivingPct: 0,
-    hillyDrivingPct: 0,
-    urbanDrivingKm: totalDistanceKm,
-    ruralDrivingKm: 0,
-    hillyDrivingKm: 0,
+    urbanDrivingPct: terrainMix.urbanDrivingPct,
+    ruralDrivingPct: terrainMix.ruralDrivingPct,
+    hillyDrivingPct: terrainMix.hillyDrivingPct,
+    urbanDrivingKm: terrainMix.urbanDrivingKm,
+    ruralDrivingKm: terrainMix.ruralDrivingKm,
+    hillyDrivingKm: terrainMix.hillyDrivingKm,
     totalTrips: Math.round(toNumber(ignitionSummary.IgnitionOnOffCounter, toNumber(distanceSummary.dataCount, tripSegments.length))),
     cumulativeDistanceKm: distanceTrend.at(-1)?.distanceKm ?? totalDistanceKm,
     speedTrend,

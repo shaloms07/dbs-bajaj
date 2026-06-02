@@ -173,6 +173,103 @@ function getDistanceTrend(current: number, previous?: number) {
   } as const;
 }
 
+function getRangeDaysCount(filter: TelemetryFilter) {
+  const start = new Date(filter.startDateTime);
+  const end = new Date(filter.endDateTime);
+  const diffMs = Math.max(end.getTime() - start.getTime(), 0);
+  return Math.max(diffMs / (24 * 60 * 60 * 1000), 1);
+}
+
+type ScoreFactor = {
+  label: string;
+  note: string;
+  points: number;
+  tone: TelemetryTone;
+};
+
+function clamp(value: number, min: number, max: number) {
+  return Math.min(Math.max(value, min), max);
+}
+
+function getTelemetryScoreModel(data: VehicleTelemetryData, filter: TelemetryFilter) {
+  const rangeDays = getRangeDaysCount(filter);
+  const avgDailyDistance = data.totalDistanceKm / Math.max(rangeDays, 1);
+  const overspeedRate = data.overspeedCount / Math.max(data.totalTrips, 1);
+  const overspeedHeadroom = Math.max(data.maxSpeed - data.overspeedLimit, 0);
+  const overspeedPenalty = Math.round(
+    clamp(overspeedRate * 22 + overspeedHeadroom * 0.9 + data.overspeedDurationMinutes * 0.7, 0, 60)
+  );
+  const nightPenalty = Math.round(clamp(Math.max(data.nightDrivingPct - 12, 0) * 0.9, 0, 35));
+  const urbanCoverageGap = Math.max(data.urbanDrivingPct - data.ruralDrivingPct - 15, 0);
+  const urbanPenalty = Math.round(clamp(urbanCoverageGap * 0.28, 0, 24));
+  const distancePenalty = Math.round(clamp((avgDailyDistance - 18) * 0.8, 0, 21));
+  const hillyBonus = Math.round(clamp(data.hillyDrivingPct * 0.28 + data.ruralDrivingPct * 0.08, 0, 12));
+  const tripIntensity = data.totalTrips / Math.max(rangeDays, 1);
+  const aggressivePenalty = Math.round(
+    clamp(
+      data.idlingRiskScore * 0.16 +
+        Math.max(tripIntensity - 3, 0) * 2.2 +
+        Math.max(data.maxSpeed - (data.overspeedLimit + 10), 0) * 0.55,
+      0,
+      30
+    )
+  );
+
+  const factors: ScoreFactor[] = [
+    {
+      label: 'Overspeed frequency',
+      note: `${data.overspeedCount} events - peak ${Math.round(data.maxSpeed)} km/h`,
+      points: -overspeedPenalty,
+      tone: overspeedPenalty >= 35 ? 'red' : overspeedPenalty >= 12 ? 'yellow' : 'green'
+    },
+    {
+      label: 'Night driving share',
+      note: `${formatPercent(data.nightDrivingPct)} of distance after 6 PM`,
+      points: -nightPenalty,
+      tone: nightPenalty >= 22 ? 'red' : nightPenalty >= 8 ? 'yellow' : 'green'
+    },
+    {
+      label: 'Urban-heavy coverage',
+      note: `${formatPercent(data.urbanDrivingPct)} urban - ${formatPercent(data.ruralDrivingPct)} rural`,
+      points: -urbanPenalty,
+      tone: urbanPenalty >= 16 ? 'red' : urbanPenalty >= 6 ? 'yellow' : 'green'
+    },
+    {
+      label: 'High daily distance',
+      note: `${formatKm(avgDailyDistance)} / day average`,
+      points: -distancePenalty,
+      tone: distancePenalty >= 14 ? 'red' : distancePenalty >= 5 ? 'yellow' : 'green'
+    },
+    {
+      label: 'Hilly terrain bonus',
+      note: data.hillyDrivingPct > 0 ? `${formatPercent(data.hillyDrivingPct)} hilly contribution` : 'No hilly terrain bonus detected',
+      points: hillyBonus,
+      tone: hillyBonus >= 6 ? 'green' : hillyBonus > 0 ? 'yellow' : 'green'
+    },
+    {
+      label: 'Aggressive movement',
+      note: `${data.ignitionCycles} ignition cycles - ${data.totalIdlingMinutes} min idling`,
+      points: -aggressivePenalty,
+      tone: aggressivePenalty >= 18 ? 'red' : aggressivePenalty >= 7 ? 'yellow' : 'green'
+    }
+  ];
+
+  const totalAdjustment = factors.reduce((sum, factor) => sum + factor.points, 0);
+  const score = clamp(Math.round(300 + totalAdjustment), 0, 300);
+  const band = score < 160 ? 'High risk' : score < 230 ? 'Moderate risk' : 'Low risk';
+  const bandTone: TelemetryTone = score < 160 ? 'red' : score < 230 ? 'yellow' : 'green';
+  const progress = clamp(score / 300, 0, 1);
+
+  return {
+    score,
+    band,
+    bandTone,
+    avgDailyDistance,
+    factors,
+    progress
+  };
+}
+
 function TooltipShell({ active, payload, label }: { active?: boolean; payload?: Array<{ value: number; name: string }>; label?: string }) {
   if (!active || !payload?.length) return null;
   return (
@@ -240,9 +337,72 @@ function TelemetryDashboardContent({
     { name: 'Hilly', value: Number(data.hillyDrivingPct.toFixed(1)), color: '#d29b00' }
   ];
   const distanceTrend = getDistanceTrend(data.totalDistanceKm, previousData?.totalDistanceKm);
+  const scoreModel = getTelemetryScoreModel(data, filter);
+  const gaugeDashArray = 314;
+  const gaugeDashOffset = gaugeDashArray * (1 - scoreModel.progress);
 
   return (
     <>
+      <section className="telemetry-score-layout">
+        <div className="score-card telemetry-score-card">
+          <div className="telemetry-panel-head">
+            <div>
+              <div className="card-title">Telematics Behaviour Score</div>
+              <div className="telemetry-panel-subtitle">Derived from overspeeding, idling, distance exposure, time-of-day, and terrain mix</div>
+            </div>
+          </div>
+          <div className="score-gauge-area">
+            <div className="gauge-container">
+              <svg viewBox="0 0 260 160" role="img" aria-label={`Telematics score ${scoreModel.score} out of 300, ${scoreModel.band}`}>
+                <defs>
+                  <linearGradient id="telemetryGaugeArc" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stopColor="#c92a2a" />
+                    <stop offset="50%" stopColor="#d29b00" />
+                    <stop offset="100%" stopColor="#0b8666" />
+                  </linearGradient>
+                </defs>
+                <path d="M30,140 A100,100 0 0,1 230,140" fill="none" stroke="#e8edf4" strokeWidth="16" strokeLinecap="round" />
+                <path
+                  d="M30,140 A100,100 0 0,1 230,140"
+                  fill="none"
+                  stroke="url(#telemetryGaugeArc)"
+                  strokeWidth="16"
+                  strokeLinecap="round"
+                  strokeDasharray={gaugeDashArray}
+                  strokeDashoffset={gaugeDashOffset}
+                />
+              </svg>
+              <div className="gauge-score-label">
+                <span className={`gauge-number telemetry-gauge-number telemetry-gauge-number--${scoreModel.bandTone}`}>{scoreModel.score}</span>
+                <span className={`gauge-band telemetry-gauge-band telemetry-gauge-band--${scoreModel.bandTone}`}>{scoreModel.band}</span>
+                <span className="telemetry-gauge-denom">out of 300</span>
+              </div>
+            </div>
+
+            <div className="telemetry-score-breakdown">
+              {scoreModel.factors.map((factor) => {
+                const barWidth = `${Math.min(Math.abs(factor.points) / 80, 1) * 100}%`;
+                return (
+                  <div key={factor.label} className="telemetry-factor-row">
+                    <div className="telemetry-factor-copy">
+                      <div className="telemetry-factor-name">{factor.label}</div>
+                      <div className="telemetry-factor-note">{factor.note}</div>
+                    </div>
+                    <div className="telemetry-factor-track">
+                      <div className={`telemetry-factor-fill telemetry-factor-fill--${factor.tone}`} style={{ width: barWidth }} />
+                    </div>
+                    <div className={`telemetry-factor-points telemetry-factor-points--${factor.tone}`}>
+                      {factor.points > 0 ? '+' : ''}
+                      {factor.points}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      </section>
+
       <section className="telemetry-insights-grid">
         {data.insights.map((insight) => (
           <div key={insight} className="card telemetry-insight-card">

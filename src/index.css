@@ -578,7 +578,7 @@ samp {
 }
 .gauge-score-label {
   position: absolute;
-  bottom: 0;
+  bottom: -8px;
   left: 50%;
   transform: translateX(-50%);
   text-align: center;
@@ -3538,6 +3538,110 @@ tbody td {
   gap: 16px;
 }
 
+.telemetry-score-layout {
+  display: grid;
+}
+
+.telemetry-score-card {
+  min-height: 0;
+  justify-content: flex-start;
+  gap: 18px;
+}
+
+.telemetry-gauge-number--green,
+.telemetry-gauge-band--green {
+  color: var(--green);
+}
+
+.telemetry-gauge-number--yellow,
+.telemetry-gauge-band--yellow {
+  color: var(--amber);
+}
+
+.telemetry-gauge-number--red,
+.telemetry-gauge-band--red {
+  color: var(--red);
+}
+
+.telemetry-gauge-denom {
+  display: block;
+  margin-top: 2px;
+  font-size: 12px;
+  color: var(--text2);
+}
+
+.telemetry-score-breakdown {
+  display: grid;
+  gap: 12px;
+}
+
+.telemetry-factor-row {
+  display: grid;
+  grid-template-columns: minmax(180px, 1.2fr) minmax(100px, 1fr) 64px;
+  gap: 12px;
+  align-items: center;
+}
+
+.telemetry-factor-copy {
+  min-width: 0;
+}
+
+.telemetry-factor-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.telemetry-factor-note {
+  margin-top: 2px;
+  font-size: 11px;
+  color: var(--text2);
+  line-height: 1.5;
+}
+
+.telemetry-factor-track {
+  height: 8px;
+  border-radius: 999px;
+  background: #eef1f5;
+  overflow: hidden;
+}
+
+.telemetry-factor-fill {
+  height: 100%;
+  border-radius: 999px;
+}
+
+.telemetry-factor-fill--green {
+  background: var(--green);
+}
+
+.telemetry-factor-fill--yellow {
+  background: var(--amber);
+}
+
+.telemetry-factor-fill--red {
+  background: var(--red);
+}
+
+.telemetry-factor-points {
+  text-align: right;
+  font-size: 12px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+}
+
+.telemetry-factor-points--green {
+  color: var(--green);
+}
+
+.telemetry-factor-points--yellow {
+  color: var(--amber);
+}
+
+.telemetry-factor-points--red {
+  color: var(--red);
+}
+
 .telemetry-insight-card p {
   margin: 0;
   color: var(--text2);
@@ -4055,6 +4159,16 @@ tbody td {
   .telemetry-kpi-card-wide {
     grid-column: span 2;
   }
+
+  .score-gauge-area {
+    grid-template-columns: 1fr;
+    justify-items: center;
+    gap: 24px;
+  }
+
+  .telemetry-score-breakdown {
+    width: 100%;
+  }
 }
 
 @media (max-width: 760px) {
@@ -4079,6 +4193,14 @@ tbody td {
   .telemetry-tabs .tab {
     width: 100%;
     text-align: center;
+  }
+
+  .telemetry-factor-row {
+    grid-template-columns: 1fr;
+  }
+
+  .telemetry-factor-points {
+    text-align: left;
   }
 
   .telemetry-event-row {
