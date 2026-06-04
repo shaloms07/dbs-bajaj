@@ -578,7 +578,7 @@ function TelemetryDashboardContent({
         <div className="telemetry-panel-head">
           <div>
             <div className="card-title">Overspeeding Instances</div>
-            <div className="telemetry-panel-subtitle">From OverSpeed Report overSpeedData; duration uses the report summary</div>
+            <div className="telemetry-panel-subtitle">From OverSpeed Report overSpeedData</div>
           </div>
         </div>
         <div className="telemetry-table-wrap">
