@@ -230,7 +230,7 @@ export default function APIConsole() {
     <div className="api-page">
       <section className="card api-hero-card">
         <p className="api-eyebrow">DBS API Console</p>
-        <h1>Integrate the DBS-Bajaj API into your system</h1>
+        <h1>Integrate the DBS API into your system</h1>
         <p>
           Use this page to generate a key, keep it safe, and then call the DBS endpoints from your application using the
           <code>x-api-key</code> header.

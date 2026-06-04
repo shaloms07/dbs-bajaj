@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
-import bajajLogo from '../assets/bajaj-logo.svg';
+import dbsLogo from '../assets/dbs-logo.png';
 import { useAuthStore } from '../store/authStore';
 import { ensureValidAccessToken } from '../services/authService';
 
@@ -78,7 +78,7 @@ export default function DashboardLayout() {
     <>
       <aside className="sidebar">
         <div className="sidebar-logo" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <img src={bajajLogo} alt="Bajaj General Insurance logo" style={{ width: '70%', objectFit: 'contain' }} />
+          <img src={dbsLogo} alt="DBS platform logo" style={{ width: '70%', objectFit: 'contain' }} />
           <div className="logo-sub">
             {/* <span style={{ display: 'block', whiteSpace: 'nowrap' }}>Vehicle risk</span> */}
             {/* <span style={{ display: 'block', whiteSpace: 'nowrap' }}>underwriting</span> */}
@@ -87,7 +87,7 @@ export default function DashboardLayout() {
 
         <div className="insurer-badge">
           <div className="label">Logged in as</div>
-          <div className="name">{user?.name ?? 'Bajaj General Insurance'}</div>
+          <div className="name">{user?.name ?? 'DBS Demo Platform'}</div>
         </div>
 
         <nav className="nav">
@@ -132,7 +132,7 @@ export default function DashboardLayout() {
         <div className="sidebar-footer">
           <div className="api-status">
             <div className="status-dot"></div>
-            DBS API · All systems operational
+            DBS API - All systems operational
           </div>
           <button onClick={logout} className="lookup-btn lookup-btn--danger" style={{ width: '100%', marginTop: 8 }}>
             Logout

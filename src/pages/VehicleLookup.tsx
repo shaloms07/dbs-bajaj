@@ -208,7 +208,7 @@ export default function VehicleLookup() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = `dbs_bajaj_${sanitizeFileName(
+    link.download = `dbs_${sanitizeFileName(
       selected.regNo || formattedReg || "vehicle",
     )}_lookup.csv`;
     link.click();
@@ -246,7 +246,7 @@ export default function VehicleLookup() {
       <!doctype html>
       <html>
         <head>
-          <title>DBS-Bajaj Vehicle Lookup Report</title>
+          <title>DBS Vehicle Lookup Report</title>
           <meta charset="utf-8" />
           <style>
             @page { size: A4; margin: 16mm; }
@@ -387,7 +387,7 @@ export default function VehicleLookup() {
           <div class="report">
             <div class="report-header">
               <div>
-                <p class="report-eyebrow">DBS-Bajaj vehicle lookup report</p>
+                <p class="report-eyebrow">DBS vehicle lookup report</p>
                 <h1 class="report-title">${escapeHtml(
                   selected.regNo || formattedReg || "Vehicle",
                 )}</h1>

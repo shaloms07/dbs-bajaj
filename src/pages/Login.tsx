@@ -1,6 +1,6 @@
 import { ChangeEvent, FormEvent, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import bajajLogo from '../assets/bajaj-logo.svg';
+import dbsLogo from '../assets/dbs-logo.png';
 import bannerImage from '../assets/motor_clp_banner.webp';
 import { useAuthStore } from '../store/authStore';
 import { login as loginRequest } from '../services/authService';
@@ -44,10 +44,10 @@ export default function Login() {
         <div className="login-visual-overlay" />
         <div className="login-visual-content">
           <div className="login-brand-chip">
-            <img src={bajajLogo} alt="Bajaj General Insurance logo" className="login-brand-mark" />
+            <img src={dbsLogo} alt="DBS platform logo" className="login-brand-mark" />
           </div>
           {/* <p className="login-eyebrow">Motor underwriting platform</p> */}
-          <h1>Assess vehicle risk with a Bajaj-first workflow.</h1>
+          <h1>Assess vehicle risk with a driver-behaviour-first workflow.</h1>
           <p className="login-copy">
             Built for quick underwriting lookups, score review, and violation history in a clean, secure interface.
           </p>
@@ -78,7 +78,7 @@ export default function Login() {
           <div className="login-card-top">
             <p className="login-card-kicker">Secure sign in</p>
             <h2>Welcome back</h2>
-            <p>Enter your credentials to access the DBS-Bajaj Insurer Dashboard.</p>
+            <p>Enter your credentials to access the DBS demo dashboard.</p>
           </div>
 
           <form onSubmit={submit} className="login-form">
@@ -113,7 +113,7 @@ export default function Login() {
             </button>
           </form>
 
-          <div className="login-footer-note">Bajaj General Insurance underwriting console</div>
+          <div className="login-footer-note">DBS underwriting demo console</div>
         </div>
       </section>
     </div>

@@ -24,7 +24,7 @@ export default function PortfolioAnalytics() {
           </div>
         </div>
         <div className="loss-ratio-card">
-          <div className="card-title">Loss Ratio Correlation by DBS-Bajaj Band</div>
+          <div className="card-title">Loss Ratio Correlation by DBS Band</div>
           <div style={{ fontSize: 11, color: 'var(--text2)', marginBottom: 4 }}>Actuarial validation · FY 2025-26 cohort</div>
           <div className="lr-chart">
             <div className="lr-row"><div className="lr-band" style={{ color: '#059669' }}>Exemplary</div><div className="lr-bar-track"><div className="lr-bar-fill" style={{ width: '34%', background: '#059669' }}></div></div><div className="lr-pct" style={{ color: '#059669' }}>34%</div><div className="lr-count">7,942 veh</div></div>

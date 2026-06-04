@@ -182,7 +182,7 @@ export default function BatchProcessing() {
         setLoading(true);
         setSubmittedCount(vehicleNumbers.length);
         setBatchResponse(null);
-        setStatusLabel('Processing on DBS-Bajaj API');
+        setStatusLabel('Processing on DBS API');
         setProgressPercent(28);
 
         try {
@@ -219,7 +219,7 @@ export default function BatchProcessing() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = 'dbs_bajaj_batch_template.csv';
+    link.download = 'dbs_batch_template.csv';
     link.click();
     URL.revokeObjectURL(url);
   };
@@ -243,7 +243,7 @@ export default function BatchProcessing() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = 'dbs_bajaj_batch_results.csv';
+    link.download = 'dbs_batch_results.csv';
     link.click();
     URL.revokeObjectURL(url);
   };
