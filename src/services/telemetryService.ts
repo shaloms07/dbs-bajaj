@@ -116,6 +116,14 @@ export interface VehicleTelemetryData {
   speedTrend: Array<{ label: string; speed: number }>;
   distanceTrend: Array<{ label: string; distanceKm: number }>;
   activityTimeline: Array<{ label: string; durationMinutes: number; tone: 'green' | 'yellow' | 'red' }>;
+  speedEventTimeline: Array<{
+    label: string;
+    eventCount: number;
+    peakSpeed: number;
+    totalDurationMinutes: number;
+    sessionCount: number;
+    tone: 'green' | 'yellow' | 'red';
+  }>;
   speedEvents: Array<{ label: string; tone: 'green' | 'yellow' | 'red'; details: string }>;
   speedLogs: TelemetrySpeedLog[];
   overspeedInstances: OverspeedInstance[];
@@ -409,7 +417,7 @@ function splitDayNightMinutes(startDate: Date, endDate: Date) {
     const minutes = Math.max((segmentEnd.getTime() - cursor.getTime()) / 60000, 0);
     const hour = cursor.getHours();
 
-    if (hour >= 6 && hour < 18) {
+    if (hour >= 6 && hour < 22) {
       dayMinutes += minutes;
     } else {
       nightMinutes += minutes;
@@ -985,6 +993,69 @@ function buildSpeedEvents(logs: TelemetrySpeedLog[]) {
     })) as Array<{ label: string; tone: 'green' | 'yellow' | 'red'; details: string }>;
 }
 
+function buildSpeedEventTimeline(logs: TelemetrySpeedLog[], overspeedInstances: OverspeedInstance[], overspeedLimit: number) {
+  const grouped = new Map<
+    string,
+    {
+      label: string;
+      eventCount: number;
+      peakSpeed: number;
+      totalDurationMinutes: number;
+      sessionCount: number;
+    }
+  >();
+
+  logs
+    .filter((log) => log.speed >= overspeedLimit)
+    .forEach((log, index) => {
+      const dayKey = log.timestamp ? new Date(log.timestamp).toISOString().slice(0, 10) : `log-${index + 1}`;
+      const label = dayKey.includes('-') ? formatTrendDate(`${dayKey}T00:00:00`) : `Day ${index + 1}`;
+      const current = grouped.get(dayKey) ?? {
+        label,
+        eventCount: 0,
+        peakSpeed: 0,
+        totalDurationMinutes: 0,
+        sessionCount: 0
+      };
+
+      current.eventCount += 1;
+      current.peakSpeed = Math.max(current.peakSpeed, log.speed);
+      grouped.set(dayKey, current);
+    });
+
+  overspeedInstances.forEach((instance) => {
+    const referenceTime = instance.startTime ?? instance.endTime;
+    const dayKey = referenceTime ? new Date(referenceTime).toISOString().slice(0, 10) : `session-${grouped.size + 1}`;
+    const label = dayKey.includes('-') ? formatTrendDate(`${dayKey}T00:00:00`) : `Day ${grouped.size + 1}`;
+    const current = grouped.get(dayKey) ?? {
+      label,
+      eventCount: 0,
+      peakSpeed: 0,
+      totalDurationMinutes: 0,
+      sessionCount: 0
+    };
+
+    current.sessionCount += 1;
+    current.totalDurationMinutes += instance.durationMinutes;
+    current.peakSpeed = Math.max(current.peakSpeed, instance.peakSpeed);
+    grouped.set(dayKey, current);
+  });
+
+  return Array.from(grouped.entries())
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([, value]) => {
+      const tone = value.peakSpeed >= 80 || value.eventCount >= 6 ? 'red' : value.peakSpeed >= 60 || value.eventCount >= 3 ? 'yellow' : 'green';
+      return {
+        label: value.label,
+        eventCount: value.eventCount,
+        peakSpeed: Math.round(value.peakSpeed),
+        totalDurationMinutes: Number(value.totalDurationMinutes.toFixed(1)),
+        sessionCount: value.sessionCount,
+        tone
+      } as const;
+    });
+}
+
 function buildBehaviorIndicators(
   totalDistanceKm: number,
   totalTrips: number,
@@ -1471,6 +1542,7 @@ export async function fetchVehicleTelemetry(filter: TelemetryFilter): Promise<Ve
   const speedTrend = buildSpeedTrend(speedRows, aggregateTrendByDay);
   const distanceTrend = buildDistanceTrend(distanceTripSegments.length ? distanceTripSegments : tripSegments, aggregateTrendByDay);
   const activityTimeline = buildActivityTimeline(tripSegments);
+  const speedEventTimeline = buildSpeedEventTimeline(overSpeedRows.length ? overSpeedRows : speedRows, overspeedInstances, overspeedLimit);
   const speedEvents = buildSpeedEvents(overSpeedRows.length ? overSpeedRows : speedRows);
   const behaviorIndicators = buildBehaviorIndicators(totalDistanceKm, tripSegments.length, maxSpeed, overspeedCount);
   const insights = buildInsights({
@@ -1511,6 +1583,7 @@ export async function fetchVehicleTelemetry(filter: TelemetryFilter): Promise<Ve
     speedTrend,
     distanceTrend,
     activityTimeline,
+    speedEventTimeline,
     speedEvents,
     speedLogs: speedRows.slice(-12).reverse(),
     overspeedInstances,

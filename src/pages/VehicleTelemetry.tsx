@@ -224,7 +224,7 @@ function getTelemetryScoreModel(data: VehicleTelemetryData, filter: TelemetryFil
     },
     {
       label: 'Night driving share',
-      note: `${formatPercent(data.nightDrivingPct)} of distance after 6 PM`,
+      note: `${formatPercent(data.nightDrivingPct)} of distance between 10 PM and 6 AM`,
       points: -nightPenalty,
       tone: nightPenalty >= 22 ? 'red' : nightPenalty >= 8 ? 'yellow' : 'green'
     },
@@ -285,6 +285,41 @@ function TooltipShell({ active, payload, label }: { active?: boolean; payload?: 
   );
 }
 
+function SpeedEventTimelineTooltip({
+  active,
+  payload,
+  label
+}: {
+  active?: boolean;
+  payload?: Array<{ payload?: { peakSpeed: number; totalDurationMinutes: number; sessionCount: number; eventCount: number } }>;
+  label?: string;
+}) {
+  if (!active || !payload?.length || !payload[0]?.payload) return null;
+  const day = payload[0].payload;
+
+  return (
+    <div className="telemetry-tooltip">
+      <div className="telemetry-tooltip-label">{label}</div>
+      <div className="telemetry-tooltip-row">
+        <span>Overspeed events</span>
+        <strong>{day.eventCount}</strong>
+      </div>
+      <div className="telemetry-tooltip-row">
+        <span>Peak speed</span>
+        <strong>{day.peakSpeed} km/h</strong>
+      </div>
+      <div className="telemetry-tooltip-row">
+        <span>Total duration</span>
+        <strong>{formatMinutes(day.totalDurationMinutes)}</strong>
+      </div>
+      <div className="telemetry-tooltip-row">
+        <span>Sessions</span>
+        <strong>{day.sessionCount}</strong>
+      </div>
+    </div>
+  );
+}
+
 function ExactLocationCell({
   latitude,
   longitude
@@ -325,6 +360,15 @@ function TelemetryDashboardContent({
 }) {
   const [visibleTripCount, setVisibleTripCount] = useState(10);
   const [showIdlingDetails, setShowIdlingDetails] = useState(false);
+  const rangeDays = getRangeDaysCount(filter);
+  const avgDistancePerDay = data.totalDistanceKm / Math.max(rangeDays, 1);
+  const avgDrivingMinutesPerDay = data.totalDrivingDurationMinutes / Math.max(rangeDays, 1);
+  const avgDayDrivingMinutesPerDay = data.dayDrivingMinutes / Math.max(rangeDays, 1);
+  const avgNightDrivingMinutesPerDay = data.nightDrivingMinutes / Math.max(rangeDays, 1);
+  const avgUrbanKmPerDay = data.urbanDrivingKm / Math.max(rangeDays, 1);
+  const avgRuralKmPerDay = data.ruralDrivingKm / Math.max(rangeDays, 1);
+  const avgOverspeedMinutesPerDay = data.overspeedDurationMinutes / Math.max(rangeDays, 1);
+  const avgIdlingMinutesPerDay = data.totalIdlingMinutes / Math.max(rangeDays, 1);
 
   useEffect(() => {
     setVisibleTripCount(10);
@@ -343,76 +387,85 @@ function TelemetryDashboardContent({
   const gaugeDashArray = 314;
   const gaugeDashOffset = gaugeDashArray * (1 - scoreModel.progress);
   const summaryCards = (
-    <section className="telemetry-kpi-grid telemetry-kpi-grid--three">
+    <section className="telemetry-kpi-grid">
       <div className="card telemetry-kpi-card">
-        <div className="telemetry-summary-label">Total Distance Driven</div>
-        <div className="telemetry-summary-value">{formatKm(data.totalDistanceKm)}</div>
-        <div className="telemetry-summary-note">Selected period utilization</div>
-        <div className={`telemetry-kpi-badge ${toneClass(distanceTrend?.tone ?? 'green')}`}>
-          {distanceTrend?.text ?? 'Trend unavailable'}
+        <div className="telemetry-kpi-card-head">
+          <div className="telemetry-summary-label">Total Distance Driven</div>
+          <div className={`telemetry-kpi-badge telemetry-kpi-badge--compact ${toneClass(distanceTrend?.tone ?? 'green')}`}>
+            {distanceTrend?.text ?? 'Trend unavailable'}
+          </div>
         </div>
+        <div className="telemetry-summary-value-row">
+          <div className="telemetry-summary-value">{formatKm(data.totalDistanceKm)}</div>
+          <div className="telemetry-summary-average">{formatKm(avgDistancePerDay)}/day</div>
+        </div>
+        <div className="telemetry-summary-note">Selected period utilization</div>
+      </div>
+
+      <div className="card telemetry-kpi-card">
+        <div className="telemetry-summary-label">Total Driving Duration</div>
+        <div className="telemetry-summary-value-row">
+          <div className="telemetry-summary-value">{formatMinutes(data.totalDrivingDurationMinutes)}</div>
+          <div className="telemetry-summary-average">{formatMinutes(avgDrivingMinutesPerDay)}/day</div>
+        </div>
+        <div className="telemetry-summary-note">{data.totalTrips} trip{data.totalTrips === 1 ? '' : 's'} in selected range</div>
+      </div>
+
+      <div className="card telemetry-kpi-card">
+        <div className="telemetry-summary-label">Day Driving</div>
+        <div className="telemetry-summary-value-row">
+          <div className="telemetry-summary-value">{formatMinutes(data.dayDrivingMinutes)}</div>
+          <div className="telemetry-summary-average">{formatMinutes(avgDayDrivingMinutesPerDay)}/day</div>
+        </div>
+        <div className="telemetry-summary-note">{formatKm(data.dayDrivingKm)} covered in daytime</div>
+      </div>
+
+      <div className="card telemetry-kpi-card">
+        <div className="telemetry-summary-label">Night Driving</div>
+        <div className="telemetry-summary-value-row">
+          <div className="telemetry-summary-value">{formatMinutes(data.nightDrivingMinutes)}</div>
+          <div className="telemetry-summary-average">{formatMinutes(avgNightDrivingMinutesPerDay)}/day</div>
+        </div>
+        <div className="telemetry-summary-note">{formatKm(data.nightDrivingKm)} covered at night</div>
+      </div>
+
+      <div className="card telemetry-kpi-card">
+        <div className="telemetry-summary-label">Urban Driving</div>
+        <div className="telemetry-summary-value-row">
+          <div className="telemetry-summary-value">{formatKm(data.urbanDrivingKm)}</div>
+          <div className="telemetry-summary-average">{formatKm(avgUrbanKmPerDay)}/day</div>
+        </div>
+        <div className="telemetry-summary-note">{formatPercent(data.urbanDrivingPct)} of overall usage</div>
+      </div>
+
+      <div className="card telemetry-kpi-card">
+        <div className="telemetry-summary-label">Rural Driving</div>
+        <div className="telemetry-summary-value-row">
+          <div className="telemetry-summary-value">{formatKm(data.ruralDrivingKm)}</div>
+          <div className="telemetry-summary-average">{formatKm(avgRuralKmPerDay)}/day</div>
+        </div>
+        <div className="telemetry-summary-note">{formatPercent(data.ruralDrivingPct)} of overall usage</div>
       </div>
 
       <div className="card telemetry-kpi-card">
         <div className="telemetry-summary-label">Overspeeding</div>
-        <div className="telemetry-kpi-stat-grid">
-          <div>
-            <span>Total Events</span>
-            <strong>{data.overspeedCount}</strong>
-          </div>
-          <div>
-            <span>Highest Speed</span>
-            <strong>{Math.round(data.maxSpeed)} km/h</strong>
-          </div>
-          <div>
-            <span>Above Threshold</span>
-            <strong>{formatMinutes(data.overspeedDurationMinutes)}</strong>
-          </div>
+        <div className="telemetry-summary-value-row">
+          <div className="telemetry-summary-value">{data.overspeedCount}</div>
+          <div className="telemetry-summary-average">{formatMinutes(avgOverspeedMinutesPerDay)}/day</div>
         </div>
-        <div className={`telemetry-kpi-badge ${toneClass(getSeverityTone(data.overspeedSeverity))}`}>
-          {data.overspeedSeverity === 'high_risk' ? 'High Risk' : data.overspeedSeverity === 'moderate' ? 'Moderate' : 'Normal'}
+        <div className="telemetry-summary-note">
+          {Math.round(data.maxSpeed)} km/h peak · {formatMinutes(data.overspeedDurationMinutes)} above threshold
         </div>
       </div>
 
       <div className="card telemetry-kpi-card">
         <div className="telemetry-summary-label">Vehicle Idling</div>
-        <div className="telemetry-kpi-stat-grid">
-          <div>
-            <span>Total Idling</span>
-            <strong>{formatSeconds(data.totalIdlingSeconds)}</strong>
-          </div>
-          <div>
-            <span>Ignition Cycles</span>
-            <strong>{data.ignitionCycles}</strong>
-          </div>
-          <div>
-            <span>Risk Score</span>
-            <strong>{data.idlingRiskScore}/100</strong>
-          </div>
+        <div className="telemetry-summary-value-row">
+          <div className="telemetry-summary-value">{formatSeconds(data.totalIdlingSeconds)}</div>
+          <div className="telemetry-summary-average">{formatMinutes(avgIdlingMinutesPerDay)}/day</div>
         </div>
-        <div className="telemetry-idling-mini-grid">
-          <div>
-            <span>Longest Idle</span>
-            <strong>{formatSeconds(data.longestIdleSessionSeconds)}</strong>
-          </div>
-          <div>
-            <span>Average Idle</span>
-            <strong>{formatSeconds(data.averageIdleSessionSeconds)}</strong>
-          </div>
-          <div>
-            <span>Idle Sessions</span>
-            <strong>{data.idleSessionCount}</strong>
-          </div>
-        </div>
-        <div className="telemetry-kpi-actions">
-          <div className={`telemetry-kpi-badge ${toneClass(getSeverityTone(data.idlingSeverity))}`}>
-            {data.idlingSeverity === 'critical' ? 'Critical' : data.idlingSeverity === 'warning' ? 'Warning' : 'Normal'}
-          </div>
-          {data.idlingSessions.length ? (
-            <button type="button" className="lookup-btn telemetry-detail-btn" onClick={() => setShowIdlingDetails(true)}>
-              View Detailed Idling Events
-            </button>
-          ) : null}
+        <div className="telemetry-summary-note">
+          {data.idleSessionCount} idle session{data.idleSessionCount === 1 ? '' : 's'} · {data.ignitionCycles} ignition cycles
         </div>
       </div>
     </section>
@@ -688,7 +741,7 @@ function TelemetryDashboardContent({
           <div className="telemetry-panel-head">
             <div>
               <div className="card-title">Day vs Night Driving</div>
-              <div className="telemetry-panel-subtitle">Distance split using the 6 AM / 6 PM driving window rule</div>
+              <div className="telemetry-panel-subtitle">Distance split using the 6 AM to 10 PM day window and 10 PM to 6 AM night window</div>
             </div>
           </div>
           <div className="telemetry-chart-two-up">
@@ -787,7 +840,7 @@ function TelemetryDashboardContent({
         <div className="telemetry-panel-head">
           <div>
             <div className="card-title">Speed Events Timeline</div>
-            <div className="telemetry-panel-subtitle">Recent high-signal speed events and driving activity timeline</div>
+            <div className="telemetry-panel-subtitle">Daily overspeed event count with day-wise severity context</div>
           </div>
         </div>
         <div className="telemetry-events-list">
@@ -804,12 +857,12 @@ function TelemetryDashboardContent({
         </div>
         <div className="telemetry-activity-chart">
           <ResponsiveContainer width="100%" height={180}>
-            <BarChart data={data.activityTimeline}>
+            <BarChart data={data.speedEventTimeline}>
               <XAxis dataKey="label" tickLine={false} axisLine={false} />
               <YAxis tickLine={false} axisLine={false} width={42} />
-              <Tooltip content={<TooltipShell />} />
-              <Bar dataKey="durationMinutes" radius={[6, 6, 0, 0]} name="Duration (min)">
-                {data.activityTimeline.map((entry) => (
+              <Tooltip content={<SpeedEventTimelineTooltip />} />
+              <Bar dataKey="eventCount" radius={[6, 6, 0, 0]} name="Overspeed events">
+                {data.speedEventTimeline.map((entry) => (
                   <Cell key={entry.label} fill={entry.tone === 'red' ? '#c92a2a' : entry.tone === 'yellow' ? '#d29b00' : '#0b8666'} />
                 ))}
               </Bar>

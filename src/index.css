@@ -3448,7 +3448,7 @@ tbody td {
 
 .telemetry-kpi-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 18px;
 }
 
@@ -3469,8 +3469,15 @@ tbody td {
 .telemetry-kpi-card {
   min-width: 0;
   display: grid;
-  gap: 14px;
+  gap: 10px;
   align-content: start;
+}
+
+.telemetry-kpi-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
 }
 
 .telemetry-kpi-card-wide {
@@ -3486,6 +3493,13 @@ tbody td {
   border-radius: 999px;
   font-size: 11px;
   font-weight: 700;
+}
+
+.telemetry-kpi-badge--compact {
+  padding: 4px 8px;
+  font-size: 9px;
+  line-height: 1.2;
+  text-align: right;
 }
 
 .telemetry-kpi-stat-grid,
@@ -3679,8 +3693,15 @@ tbody td {
   font-family: var(--font-mono);
 }
 
+.telemetry-summary-value-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
 .telemetry-summary-value {
-  font-size: 26px;
+  font-size: 24px;
   letter-spacing: -0.04em;
   color: var(--text);
   line-height: 1.05;
@@ -3688,16 +3709,19 @@ tbody td {
 }
 
 .telemetry-summary-average {
-  font-size: 15px;
+  flex-shrink: 0;
+  padding-top: 2px;
+  font-size: 13px;
   font-weight: 700;
   line-height: 1.2;
   color: var(--accent);
   overflow-wrap: anywhere;
+  text-align: right;
 }
 
 .telemetry-summary-note {
   color: var(--text2);
-  font-size: 12px;
+  font-size: 11px;
 }
 
 .telemetry-panel-grid {
