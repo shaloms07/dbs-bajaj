@@ -342,6 +342,81 @@ function TelemetryDashboardContent({
   const scoreModel = getTelemetryScoreModel(data, filter);
   const gaugeDashArray = 314;
   const gaugeDashOffset = gaugeDashArray * (1 - scoreModel.progress);
+  const summaryCards = (
+    <section className="telemetry-kpi-grid telemetry-kpi-grid--three">
+      <div className="card telemetry-kpi-card">
+        <div className="telemetry-summary-label">Total Distance Driven</div>
+        <div className="telemetry-summary-value">{formatKm(data.totalDistanceKm)}</div>
+        <div className="telemetry-summary-note">Selected period utilization</div>
+        <div className={`telemetry-kpi-badge ${toneClass(distanceTrend?.tone ?? 'green')}`}>
+          {distanceTrend?.text ?? 'Trend unavailable'}
+        </div>
+      </div>
+
+      <div className="card telemetry-kpi-card">
+        <div className="telemetry-summary-label">Overspeeding</div>
+        <div className="telemetry-kpi-stat-grid">
+          <div>
+            <span>Total Events</span>
+            <strong>{data.overspeedCount}</strong>
+          </div>
+          <div>
+            <span>Highest Speed</span>
+            <strong>{Math.round(data.maxSpeed)} km/h</strong>
+          </div>
+          <div>
+            <span>Above Threshold</span>
+            <strong>{formatMinutes(data.overspeedDurationMinutes)}</strong>
+          </div>
+        </div>
+        <div className={`telemetry-kpi-badge ${toneClass(getSeverityTone(data.overspeedSeverity))}`}>
+          {data.overspeedSeverity === 'high_risk' ? 'High Risk' : data.overspeedSeverity === 'moderate' ? 'Moderate' : 'Normal'}
+        </div>
+      </div>
+
+      <div className="card telemetry-kpi-card">
+        <div className="telemetry-summary-label">Vehicle Idling</div>
+        <div className="telemetry-kpi-stat-grid">
+          <div>
+            <span>Total Idling</span>
+            <strong>{formatSeconds(data.totalIdlingSeconds)}</strong>
+          </div>
+          <div>
+            <span>Ignition Cycles</span>
+            <strong>{data.ignitionCycles}</strong>
+          </div>
+          <div>
+            <span>Risk Score</span>
+            <strong>{data.idlingRiskScore}/100</strong>
+          </div>
+        </div>
+        <div className="telemetry-idling-mini-grid">
+          <div>
+            <span>Longest Idle</span>
+            <strong>{formatSeconds(data.longestIdleSessionSeconds)}</strong>
+          </div>
+          <div>
+            <span>Average Idle</span>
+            <strong>{formatSeconds(data.averageIdleSessionSeconds)}</strong>
+          </div>
+          <div>
+            <span>Idle Sessions</span>
+            <strong>{data.idleSessionCount}</strong>
+          </div>
+        </div>
+        <div className="telemetry-kpi-actions">
+          <div className={`telemetry-kpi-badge ${toneClass(getSeverityTone(data.idlingSeverity))}`}>
+            {data.idlingSeverity === 'critical' ? 'Critical' : data.idlingSeverity === 'warning' ? 'Warning' : 'Normal'}
+          </div>
+          {data.idlingSessions.length ? (
+            <button type="button" className="lookup-btn telemetry-detail-btn" onClick={() => setShowIdlingDetails(true)}>
+              View Detailed Idling Events
+            </button>
+          ) : null}
+        </div>
+      </div>
+    </section>
+  );
 
   return (
     <>
@@ -406,6 +481,8 @@ function TelemetryDashboardContent({
           </div>
         </section>
       ) : null}
+
+      {summaryCards}
 
       <section className="telemetry-insights-grid">
         {data.insights.map((insight) => (
@@ -505,38 +582,6 @@ function TelemetryDashboardContent({
         <div>
           <p className="api-eyebrow">Speed & Distance</p>
           <h2>Utilization, speed profile, and overspeed review</h2>
-        </div>
-      </section>
-
-      <section className="telemetry-kpi-grid telemetry-kpi-grid--two">
-        <div className="card telemetry-kpi-card">
-          <div className="telemetry-summary-label">Total Distance Driven</div>
-          <div className="telemetry-summary-value">{formatKm(data.totalDistanceKm)}</div>
-          <div className="telemetry-summary-note">Selected period utilization</div>
-          <div className={`telemetry-kpi-badge ${toneClass(distanceTrend?.tone ?? 'green')}`}>
-            {distanceTrend?.text ?? 'Trend unavailable'}
-          </div>
-        </div>
-
-        <div className="card telemetry-kpi-card">
-          <div className="telemetry-summary-label">Overspeeding</div>
-          <div className="telemetry-kpi-stat-grid">
-            <div>
-              <span>Total Events</span>
-              <strong>{data.overspeedCount}</strong>
-            </div>
-            <div>
-              <span>Highest Speed</span>
-              <strong>{Math.round(data.maxSpeed)} km/h</strong>
-            </div>
-            <div>
-              <span>Above Threshold</span>
-              <strong>{formatMinutes(data.overspeedDurationMinutes)}</strong>
-            </div>
-          </div>
-          <div className={`telemetry-kpi-badge ${toneClass(getSeverityTone(data.overspeedSeverity))}`}>
-            {data.overspeedSeverity === 'high_risk' ? 'High Risk' : data.overspeedSeverity === 'moderate' ? 'Moderate' : 'Normal'}
-          </div>
         </div>
       </section>
 
@@ -703,49 +748,7 @@ function TelemetryDashboardContent({
       </section>
 
       <section className="telemetry-kpi-grid telemetry-kpi-grid--two">
-        <div className="card telemetry-kpi-card">
-          <div className="telemetry-summary-label">Vehicle Idling</div>
-          <div className="telemetry-kpi-stat-grid">
-            <div>
-              <span>Total Idling</span>
-              <strong>{formatSeconds(data.totalIdlingSeconds)}</strong>
-            </div>
-            <div>
-              <span>Ignition Cycles</span>
-              <strong>{data.ignitionCycles}</strong>
-            </div>
-            <div>
-              <span>Risk Score</span>
-              <strong>{data.idlingRiskScore}/100</strong>
-            </div>
-          </div>
-          <div className="telemetry-idling-mini-grid">
-            <div>
-              <span>Longest Idle</span>
-              <strong>{formatSeconds(data.longestIdleSessionSeconds)}</strong>
-            </div>
-            <div>
-              <span>Average Idle</span>
-              <strong>{formatSeconds(data.averageIdleSessionSeconds)}</strong>
-            </div>
-            <div>
-              <span>Idle Sessions</span>
-              <strong>{data.idleSessionCount}</strong>
-            </div>
-          </div>
-          <div className="telemetry-kpi-actions">
-            <div className={`telemetry-kpi-badge ${toneClass(getSeverityTone(data.idlingSeverity))}`}>
-              {data.idlingSeverity === 'critical' ? 'Critical' : data.idlingSeverity === 'warning' ? 'Warning' : 'Normal'}
-            </div>
-            {data.idlingSessions.length ? (
-              <button type="button" className="lookup-btn telemetry-detail-btn" onClick={() => setShowIdlingDetails(true)}>
-                View Detailed Idling Events
-              </button>
-            ) : null}
-          </div>
-        </div>
-
-        <div className="card telemetry-panel">
+        <div className="card telemetry-panel telemetry-kpi-card-wide">
           <div className="telemetry-panel-head">
             <div>
               <div className="card-title">Idling Intelligence</div>
