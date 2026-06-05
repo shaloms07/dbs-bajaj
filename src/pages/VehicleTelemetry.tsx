@@ -313,13 +313,15 @@ function TelemetryDashboardContent({
   previousData,
   filter,
   dayNightChartData,
-  behaviorIndicators
+  behaviorIndicators,
+  showTelematicsScore
 }: {
   data: VehicleTelemetryData;
   previousData?: VehicleTelemetryData;
   filter: TelemetryFilter;
   dayNightChartData: Array<{ name: string; value: number; color: string }>;
   behaviorIndicators: TelemetryBehaviorIndicator[];
+  showTelematicsScore: boolean;
 }) {
   const [visibleTripCount, setVisibleTripCount] = useState(10);
   const [showIdlingDetails, setShowIdlingDetails] = useState(false);
@@ -343,65 +345,67 @@ function TelemetryDashboardContent({
 
   return (
     <>
-      <section className="telemetry-score-layout">
-        <div className="score-card telemetry-score-card">
-          <div className="telemetry-panel-head">
-            <div>
-              <div className="card-title">Telematics Behaviour Score</div>
-              <div className="telemetry-panel-subtitle">Derived from overspeeding, idling, distance exposure, time-of-day, and terrain mix</div>
-            </div>
-          </div>
-          <div className="score-gauge-area">
-            <div className="gauge-container">
-              <svg viewBox="0 0 260 160" role="img" aria-label={`Telematics score ${scoreModel.score} out of 300, ${scoreModel.band}`}>
-                <defs>
-                  <linearGradient id="telemetryGaugeArc" x1="0%" y1="0%" x2="100%" y2="0%">
-                    <stop offset="0%" stopColor="#c92a2a" />
-                    <stop offset="50%" stopColor="#d29b00" />
-                    <stop offset="100%" stopColor="#0b8666" />
-                  </linearGradient>
-                </defs>
-                <path d="M30,140 A100,100 0 0,1 230,140" fill="none" stroke="#e8edf4" strokeWidth="16" strokeLinecap="round" />
-                <path
-                  d="M30,140 A100,100 0 0,1 230,140"
-                  fill="none"
-                  stroke="url(#telemetryGaugeArc)"
-                  strokeWidth="16"
-                  strokeLinecap="round"
-                  strokeDasharray={gaugeDashArray}
-                  strokeDashoffset={gaugeDashOffset}
-                />
-              </svg>
-              <div className="gauge-score-label">
-                <span className={`gauge-number telemetry-gauge-number telemetry-gauge-number--${scoreModel.bandTone}`}>{scoreModel.score}</span>
-                <span className={`gauge-band telemetry-gauge-band telemetry-gauge-band--${scoreModel.bandTone}`}>{scoreModel.band}</span>
-                <span className="telemetry-gauge-denom">out of 300</span>
+      {showTelematicsScore ? (
+        <section className="telemetry-score-layout">
+          <div className="score-card telemetry-score-card">
+            <div className="telemetry-panel-head">
+              <div>
+                <div className="card-title">Telematics Behaviour Score</div>
+                <div className="telemetry-panel-subtitle">Derived from overspeeding, idling, distance exposure, time-of-day, and terrain mix</div>
               </div>
             </div>
+            <div className="score-gauge-area">
+              <div className="gauge-container">
+                <svg viewBox="0 0 260 160" role="img" aria-label={`Telematics score ${scoreModel.score} out of 300, ${scoreModel.band}`}>
+                  <defs>
+                    <linearGradient id="telemetryGaugeArc" x1="0%" y1="0%" x2="100%" y2="0%">
+                      <stop offset="0%" stopColor="#c92a2a" />
+                      <stop offset="50%" stopColor="#d29b00" />
+                      <stop offset="100%" stopColor="#0b8666" />
+                    </linearGradient>
+                  </defs>
+                  <path d="M30,140 A100,100 0 0,1 230,140" fill="none" stroke="#e8edf4" strokeWidth="16" strokeLinecap="round" />
+                  <path
+                    d="M30,140 A100,100 0 0,1 230,140"
+                    fill="none"
+                    stroke="url(#telemetryGaugeArc)"
+                    strokeWidth="16"
+                    strokeLinecap="round"
+                    strokeDasharray={gaugeDashArray}
+                    strokeDashoffset={gaugeDashOffset}
+                  />
+                </svg>
+                <div className="gauge-score-label">
+                  <span className={`gauge-number telemetry-gauge-number telemetry-gauge-number--${scoreModel.bandTone}`}>{scoreModel.score}</span>
+                  <span className={`gauge-band telemetry-gauge-band telemetry-gauge-band--${scoreModel.bandTone}`}>{scoreModel.band}</span>
+                  <span className="telemetry-gauge-denom">out of 300</span>
+                </div>
+              </div>
 
-            <div className="telemetry-score-breakdown">
-              {scoreModel.factors.map((factor) => {
-                const barWidth = `${Math.min(Math.abs(factor.points) / 80, 1) * 100}%`;
-                return (
-                  <div key={factor.label} className="telemetry-factor-row">
-                    <div className="telemetry-factor-copy">
-                      <div className="telemetry-factor-name">{factor.label}</div>
-                      <div className="telemetry-factor-note">{factor.note}</div>
+              <div className="telemetry-score-breakdown">
+                {scoreModel.factors.map((factor) => {
+                  const barWidth = `${Math.min(Math.abs(factor.points) / 80, 1) * 100}%`;
+                  return (
+                    <div key={factor.label} className="telemetry-factor-row">
+                      <div className="telemetry-factor-copy">
+                        <div className="telemetry-factor-name">{factor.label}</div>
+                        <div className="telemetry-factor-note">{factor.note}</div>
+                      </div>
+                      <div className="telemetry-factor-track">
+                        <div className={`telemetry-factor-fill telemetry-factor-fill--${factor.tone}`} style={{ width: barWidth }} />
+                      </div>
+                      <div className={`telemetry-factor-points telemetry-factor-points--${factor.tone}`}>
+                        {factor.points > 0 ? '+' : ''}
+                        {factor.points}
+                      </div>
                     </div>
-                    <div className="telemetry-factor-track">
-                      <div className={`telemetry-factor-fill telemetry-factor-fill--${factor.tone}`} style={{ width: barWidth }} />
-                    </div>
-                    <div className={`telemetry-factor-points telemetry-factor-points--${factor.tone}`}>
-                      {factor.points > 0 ? '+' : ''}
-                      {factor.points}
-                    </div>
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
+      ) : null}
 
       <section className="telemetry-insights-grid">
         {data.insights.map((insight) => (
@@ -1146,6 +1150,7 @@ export default function VehicleTelemetry() {
           filter={allTimeFilter}
           dayNightChartData={allTimeDayNightChartData}
           behaviorIndicators={allTimeBehaviorIndicators}
+          showTelematicsScore={true}
         />
       ) : null}
 
@@ -1156,6 +1161,7 @@ export default function VehicleTelemetry() {
           filter={appliedFilter}
           dayNightChartData={dayNightChartData}
           behaviorIndicators={behaviorIndicators}
+          showTelematicsScore={false}
         />
       ) : null}
     </div>
