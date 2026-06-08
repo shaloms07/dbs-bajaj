@@ -14,7 +14,7 @@ import {
   XAxis,
   YAxis
 } from 'recharts';
-import { useVehicleTelemetry } from '../hooks/useVehicleTelemetry';
+import { useMonthlyCachedVehicleTelemetry, useVehicleTelemetry } from '../hooks/useVehicleTelemetry';
 import {
   getDefaultTelemetryFilter,
   getTelemetryVehicles,
@@ -1002,9 +1002,9 @@ export default function VehicleTelemetry() {
     }),
     [allTimeFilter]
   );
-  const allTimeTelemetry = useVehicleTelemetry(allTimeFilter);
+  const allTimeTelemetry = useMonthlyCachedVehicleTelemetry(allTimeFilter, 'last-year');
   const previousTelemetry = useVehicleTelemetry(previousFilter);
-  const allTimePreviousTelemetry = useVehicleTelemetry(allTimePreviousFilter);
+  const allTimePreviousTelemetry = useMonthlyCachedVehicleTelemetry(allTimePreviousFilter, 'last-year-previous');
 
   const dayNightChartData = telemetry.data
     ? [
