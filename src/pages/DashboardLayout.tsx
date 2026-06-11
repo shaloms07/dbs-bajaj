@@ -7,6 +7,7 @@ import { ensureValidAccessToken } from '../services/authService';
 const pageTitles: Record<string, string> = {
   lookup: 'Vehicle Lookup',
   telemetry: 'Vehicle Telemetry',
+  'telemetry-raw': 'TM100 Raw Telemetry',
   portfolio: 'Portfolio Analytics',
   batch: 'Batch Processing',
   'usage-billing': 'Usage & Consumption',
@@ -101,12 +102,6 @@ export default function DashboardLayout() {
             Batch Processing
             {/* <span className="nav-badge">3</span> */}
           </NavLink>
-          <NavLink to="/telemetry" className={navItemClass}>
-            <svg className="icon" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-              <path d="M3 12h3l2-5 4 10 2-5h7" />
-            </svg>
-            Vehicle Telemetry
-          </NavLink>
           <NavLink to="/usage-billing" className={navItemClass}>
             <svg className="icon" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
               <rect x="3" y="6" width="18" height="12" rx="2" />
@@ -114,6 +109,22 @@ export default function DashboardLayout() {
               <path d="M16 13h2" />
             </svg>
             Usage & Consumption
+          </NavLink>
+
+          <div className="nav-section">Vehicle Telemetry</div>
+          <NavLink to="/telemetry" className={navItemClass}>
+            <svg className="icon" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+              <path d="M3 12h3l2-5 4 10 2-5h7" />
+            </svg>
+            Trackmaster Telemetry
+          </NavLink>
+          <NavLink to="/telemetry-raw" className={navItemClass}>
+            <svg className="icon" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+              <path d="M4 7h16" />
+              <path d="M4 12h10" />
+              <path d="M4 17h16" />
+            </svg>
+            TM100 Raw Telemetry
           </NavLink>
 
           {/* <div className="nav-section">Analytics</div>

@@ -10,6 +10,7 @@ import UsageBilling from './pages/UsageBilling';
 import APIConsole from './pages/APIConsole';
 
 const VehicleTelemetry = lazy(() => import('./pages/VehicleTelemetry'));
+const TM100Telemetry = lazy(() => import('./pages/TM100Telemetry'));
 
 function ProtectedRoute({ children }: { children: ReactElement }) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
@@ -41,6 +42,14 @@ export default function App() {
             element={
               <Suspense fallback={<div className="card">Loading telemetry dashboard...</div>}>
                 <VehicleTelemetry />
+              </Suspense>
+            }
+          />
+          <Route
+            path="telemetry-raw"
+            element={
+              <Suspense fallback={<div className="card">Loading TM100 raw telemetry...</div>}>
+                <TM100Telemetry />
               </Suspense>
             }
           />

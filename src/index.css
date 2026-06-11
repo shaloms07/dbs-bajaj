@@ -3767,6 +3767,55 @@ tbody td {
   min-width: 0;
 }
 
+.raw-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.raw-feed-table th:nth-child(7),
+.raw-feed-table td:nth-child(7) {
+  min-width: 380px;
+  width: 38%;
+}
+
+.raw-message-cell code {
+  display: block;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 11px;
+  line-height: 1.6;
+  color: var(--text2);
+  font-family: var(--font-mono);
+}
+
+.raw-packet-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 42px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+}
+
+.raw-packet-badge--green {
+  background: rgba(11, 134, 102, 0.12);
+  color: var(--green);
+}
+
+.raw-packet-badge--yellow {
+  background: rgba(210, 155, 0, 0.14);
+  color: var(--amber);
+}
+
+.raw-packet-badge--red {
+  background: rgba(201, 42, 42, 0.12);
+  color: var(--red);
+}
+
 .telemetry-side-metrics {
   display: grid;
   gap: 10px;
