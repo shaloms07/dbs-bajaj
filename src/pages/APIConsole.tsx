@@ -1,54 +1,59 @@
 import { useMemo, useState } from 'react';
+import { useBranding } from '../branding/useBranding';
 import { useApiKeys, useCreateApiKey, useDeleteApiKey, useRenameApiKey } from '../hooks/useApiKeys';
 import { ApiKeyItem, CreateApiKeyResponse } from '../services/apiKeyService';
 
-const endpointDocs = [
-  {
-    method: 'GET',
-    path: '/api/v1/score/{vehicle_number}',
-    title: 'Get Score',
-    description: 'Returns the DBS score, risk label, premium modifier, and core score summary for a vehicle.',
-    auth: 'x-api-key',
-    params: ['Path: vehicle_number', 'Header: x-api-key', 'Base URL: https://citihubkiosk.com/dbs'],
-    sampleVehicle: 'UP32AB1234'
-  },
-  {
-    method: 'GET',
-    path: '/api/v1/violations/{vehicle_number}',
-    title: 'Get Violations',
-    description: 'Returns challans, offense details, severity, deduction points, and violation metadata.',
-    auth: 'x-api-key',
-    params: ['Path: vehicle_number', 'Header: x-api-key', 'Use for violation-history screens'],
-    sampleVehicle: 'MH04CD5678'
-  },
-  {
-    method: 'GET',
-    path: '/api/v1/vehicles/{vehicle_number}',
-    title: 'Get Vehicle',
-    description: 'Returns RC and vehicle profile details for a vehicle number.',
-    auth: 'x-api-key',
-    params: ['Path: vehicle_number', 'Header: x-api-key', 'Use for RC/profile lookup'],
-    sampleVehicle: 'DL8CAF5031'
-  }
-] as const;
+function buildEndpointDocs(scoreLabel: string) {
+  return [
+    {
+      method: 'GET',
+      path: '/api/v1/score/{vehicle_number}',
+      title: 'Get Score',
+      description: `Returns the ${scoreLabel}, risk label, premium modifier, and core score summary for a vehicle.`,
+      auth: 'x-api-key',
+      params: ['Path: vehicle_number', 'Header: x-api-key', 'Base URL: https://citihubkiosk.com/dbs'],
+      sampleVehicle: 'UP32AB1234'
+    },
+    {
+      method: 'GET',
+      path: '/api/v1/violations/{vehicle_number}',
+      title: 'Get Violations',
+      description: 'Returns challans, offense details, severity, deduction points, and violation metadata.',
+      auth: 'x-api-key',
+      params: ['Path: vehicle_number', 'Header: x-api-key', 'Use for violation-history screens'],
+      sampleVehicle: 'MH04CD5678'
+    },
+    {
+      method: 'GET',
+      path: '/api/v1/vehicles/{vehicle_number}',
+      title: 'Get Vehicle',
+      description: 'Returns RC and vehicle profile details for a vehicle number.',
+      auth: 'x-api-key',
+      params: ['Path: vehicle_number', 'Header: x-api-key', 'Use for RC/profile lookup'],
+      sampleVehicle: 'DL8CAF5031'
+    }
+  ] as const;
+}
 
-const gettingStarted = [
-  {
-    step: '1',
-    title: 'Create an API key',
-    description: 'Generate a key from the API Keys panel below before calling any DBS endpoint.'
-  },
-  {
-    step: '2',
-    title: 'Copy it securely',
-    description: 'Store the raw key somewhere safe. You will use it later to authenticate every API request.'
-  },
-  {
-    step: '3',
-    title: 'Call the endpoints',
-    description: 'Send the key in the `x-api-key` header and use the endpoint reference below to integrate.'
-  }
-] as const;
+function buildGettingStarted(shortName: string) {
+  return [
+    {
+      step: '1',
+      title: 'Create an API key',
+      description: `Generate a key from the API Keys panel below before calling any ${shortName} endpoint.`
+    },
+    {
+      step: '2',
+      title: 'Copy it securely',
+      description: 'Store the raw key somewhere safe. You will use it later to authenticate every API request.'
+    },
+    {
+      step: '3',
+      title: 'Call the endpoints',
+      description: 'Send the key in the `x-api-key` header and use the endpoint reference below to integrate.'
+    }
+  ] as const;
+}
 
 function formatDate(value: string | null) {
   if (!value) return 'Never';
@@ -152,6 +157,7 @@ function ApiKeyRow({
 }
 
 export default function APIConsole() {
+  const branding = useBranding();
   const { data: apiKeys = [], isLoading, error } = useApiKeys();
   const createMutation = useCreateApiKey();
   const renameMutation = useRenameApiKey();
@@ -163,6 +169,8 @@ export default function APIConsole() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState('');
   const [revokedKeys, setRevokedKeys] = useState<ApiKeyItem[]>([]);
+  const endpointDocs = useMemo(() => buildEndpointDocs(branding.scoreLabel), [branding.scoreLabel]);
+  const gettingStarted = useMemo(() => buildGettingStarted(branding.shortName), [branding.shortName]);
 
   const activeKeyCount = useMemo(() => apiKeys.filter((key) => key.is_active).length, [apiKeys]);
 
@@ -229,10 +237,10 @@ export default function APIConsole() {
   return (
     <div className="api-page">
       <section className="card api-hero-card">
-        <p className="api-eyebrow">DBS API Console</p>
-        <h1>Integrate the DBS-Bajaj API into your system</h1>
+        <p className="api-eyebrow">{branding.apiName} Console</p>
+        <h1>Integrate the {branding.apiName} into your system</h1>
         <p>
-          Use this page to generate a key, keep it safe, and then call the DBS endpoints from your application using the
+          Use this page to generate a key, keep it safe, and then call the {branding.shortName} endpoints from your application using the
           <code>x-api-key</code> header.
         </p>
         <div className="api-hero-grid">
@@ -266,7 +274,7 @@ export default function APIConsole() {
             ))}
           </div>
           <div className="api-callout">
-            After you generate a key, store the raw value somewhere secure. You will use that same key for every other DBS endpoint.
+            After you generate a key, store the raw value somewhere secure. You will use that same key for every other {branding.shortName} endpoint.
           </div>
         </div>
 
@@ -348,7 +356,7 @@ export default function APIConsole() {
           <div>
             <div className="card-title">Endpoint reference</div>
             <p className="api-reference-copy">
-              These are the public DBS endpoints you can integrate after generating a key. Each request should include the
+              These are the public {branding.shortName} endpoints you can integrate after generating a key. Each request should include the
               <code>x-api-key</code> header.
             </p>
           </div>

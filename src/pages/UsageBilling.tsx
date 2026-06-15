@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useBranding } from '../branding/useBranding';
 import { useUsageBillingSummary } from '../hooks/useUsageBillingSummary';
 import { UsageBillingBucketItem, UsageBillingRiskItem, UsageBillingWindow } from '../services/usageBillingService';
 
@@ -166,6 +167,7 @@ function buildSummaryStats(historyRows: ReturnType<typeof buildHistoryRows>) {
 
 export default function UsageBilling() {
   const [activeTab, setActiveTab] = useState<TabKey>('today');
+  const branding = useBranding();
   const { data, isLoading, error } = useUsageBillingSummary();
 
   const tabData =
@@ -259,7 +261,7 @@ export default function UsageBilling() {
           <div className="usage-billing-eyebrow">Operations dashboard</div>
           <h2 className="usage-billing-title">Usage & Consumption</h2>
           <p className="usage-billing-intro">
-            A compact command view for DBS Score usage, service health, and monthly consumption tracking.
+            A compact command view for {branding.scoreLabel} usage, service health, and monthly consumption tracking.
           </p>
         </div>
 

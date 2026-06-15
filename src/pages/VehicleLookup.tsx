@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
+import { useBranding } from "../branding/useBranding";
 import { useScoreLookup } from "../hooks/useScoreLookup";
 import { ScoreResult } from "../types/score";
 import { scoreColor } from "../utils/scoreColor";
@@ -63,6 +64,7 @@ function formatVehicleNumber(value: string) {
 }
 
 export default function VehicleLookup() {
+  const branding = useBranding();
   const [searchParams, setSearchParams] = useSearchParams();
   const [regInput, setRegInput] = useState("");
   const [queryReg, setQueryReg] = useState("");
@@ -208,7 +210,7 @@ export default function VehicleLookup() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = `dbs_bajaj_${sanitizeFileName(
+    link.download = `${branding.filePrefix}_${sanitizeFileName(
       selected.regNo || formattedReg || "vehicle",
     )}_lookup.csv`;
     link.click();
@@ -246,7 +248,7 @@ export default function VehicleLookup() {
       <!doctype html>
       <html>
         <head>
-          <title>DBS-Bajaj Vehicle Lookup Report</title>
+          <title>${escapeHtml(branding.vehicleLookupReportTitle)}</title>
           <meta charset="utf-8" />
           <style>
             @page { size: A4; margin: 16mm; }
@@ -387,7 +389,7 @@ export default function VehicleLookup() {
           <div class="report">
             <div class="report-header">
               <div>
-                <p class="report-eyebrow">DBS-Bajaj vehicle lookup report</p>
+                <p class="report-eyebrow">${escapeHtml(branding.vehicleLookupReportTitle)}</p>
                 <h1 class="report-title">${escapeHtml(
                   selected.regNo || formattedReg || "Vehicle",
                 )}</h1>
@@ -498,8 +500,7 @@ export default function VehicleLookup() {
           <div className="lookup-insight-item">
             <strong>Run a registration lookup</strong>
             <span>
-              Enter a vehicle number below to pull the latest DBS score and
-              violation history.
+              Enter a vehicle number below to pull the latest {branding.scoreLabel} and violation history.
             </span>
           </div>
           <div className="lookup-insight-item">

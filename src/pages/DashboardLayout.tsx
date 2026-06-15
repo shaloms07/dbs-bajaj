@@ -1,8 +1,8 @@
 import { useEffect } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
-import bajajLogo from '../assets/bajaj-logo.svg';
-import { useAuthStore } from '../store/authStore';
+import { useBranding } from '../branding/useBranding';
 import { ensureValidAccessToken } from '../services/authService';
+import { useAuthStore } from '../store/authStore';
 
 const pageTitles: Record<string, string> = {
   lookup: 'Vehicle Lookup',
@@ -12,17 +12,18 @@ const pageTitles: Record<string, string> = {
   api: 'API Console'
 };
 
-const navItemClass = ({ isActive }: { isActive: boolean }) =>
-  `nav-item ${isActive ? 'active' : ''}`;
+const navItemClass = ({ isActive }: { isActive: boolean }) => `nav-item ${isActive ? 'active' : ''}`;
 
 export default function DashboardLayout() {
-  const clearAuth = useAuthStore((s) => s.clearAuth);
-  const user = useAuthStore((s) => s.user);
-  const token = useAuthStore((s) => s.token);
-  const refreshToken = useAuthStore((s) => s.refreshToken);
+  const clearAuth = useAuthStore((state) => state.clearAuth);
+  const user = useAuthStore((state) => state.user);
+  const token = useAuthStore((state) => state.token);
+  const refreshToken = useAuthStore((state) => state.refreshToken);
+  const branding = useBranding();
   const location = useLocation();
   const pathKey = location.pathname.split('/').filter(Boolean).at(-1) ?? 'lookup';
   const activePage = pageTitles[pathKey] ?? 'Vehicle Lookup';
+  const accountLabel = user?.username ?? user?.email ?? user?.name ?? 'Unknown user';
 
   useEffect(() => {
     if (!token || !refreshToken) {
@@ -66,7 +67,11 @@ export default function DashboardLayout() {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('focus', handleWindowFocus);
     };
-  }, [token, refreshToken]);
+  }, [refreshToken, token]);
+
+  useEffect(() => {
+    document.title = `${branding.appName} | ${activePage}`;
+  }, [activePage, branding.appName]);
 
   const logout = () => {
     clearAuth();
@@ -77,16 +82,14 @@ export default function DashboardLayout() {
     <>
       <aside className="sidebar">
         <div className="sidebar-logo" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <img src={bajajLogo} alt="Bajaj General Insurance logo" style={{ width: '70%', objectFit: 'contain' }} />
-          <div className="logo-sub">
-            {/* <span style={{ display: 'block', whiteSpace: 'nowrap' }}>Vehicle risk</span> */}
-            {/* <span style={{ display: 'block', whiteSpace: 'nowrap' }}>underwriting</span> */}
-          </div>
+          <img src={branding.logoSrc} alt={branding.logoAlt} style={{ width: '70%', objectFit: 'contain' }} />
+          <div className="logo-sub" />
         </div>
 
         <div className="insurer-badge">
-          <div className="label">Logged in as</div>
-          <div className="name">{user?.name ?? 'Bajaj General Insurance'}</div>
+          <div className="label">Client</div>
+          <div className="name">{branding.companyName}</div>
+          <div style={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: 11, marginTop: 4 }}>{accountLabel}</div>
         </div>
 
         <nav className="nav">
@@ -98,7 +101,6 @@ export default function DashboardLayout() {
           <NavLink to="/batch" className={navItemClass}>
             <svg className="icon" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" /><path d="M9 9h6M9 12h6M9 15h4" /></svg>
             Batch Processing
-            {/* <span className="nav-badge">3</span> */}
           </NavLink>
           <NavLink to="/usage-billing" className={navItemClass}>
             <svg className="icon" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
@@ -108,12 +110,6 @@ export default function DashboardLayout() {
             </svg>
             Usage & Consumption
           </NavLink>
-
-          {/* <div className="nav-section">Analytics</div>
-          <NavLink to="/portfolio" className={navItemClass}>
-            <svg className="icon" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M3 3v18h18" /><path d="m19 9-5 5-4-4-3 3" /></svg>
-            Portfolio Analytics
-          </NavLink> */}
 
           <div className="nav-section">Developer</div>
           <NavLink to="/api" className={navItemClass}>
@@ -125,7 +121,7 @@ export default function DashboardLayout() {
         <div className="sidebar-footer">
           <div className="api-status">
             <div className="status-dot"></div>
-            DBS API · All systems operational
+            {branding.apiName} · All systems operational
           </div>
           <button onClick={logout} className="lookup-btn lookup-btn--danger" style={{ width: '100%', marginTop: 8 }}>
             Logout
@@ -135,6 +131,13 @@ export default function DashboardLayout() {
 
       <main className="main">
         <header className="topbar">
+          <div className="topbar-brand">
+            <img src={branding.logoSrc} alt={branding.logoAlt} className="topbar-brand-logo" />
+            <div className="topbar-brand-copy">
+              <span>{branding.companyName}</span>
+              <strong>{branding.appName}</strong>
+            </div>
+          </div>
           <span className="page-title">{activePage}</span>
         </header>
 

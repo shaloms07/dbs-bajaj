@@ -2,6 +2,7 @@ import { create } from 'zustand';
 
 export interface AuthUser {
   name: string;
+  username?: string;
   email?: string;
   insurer?: string;
 }

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Papa, { ParseResult } from 'papaparse';
+import { useBranding } from '../branding/useBranding';
 import { submitBatch, BatchLookupResponse, BatchLookupResult } from '../services/batchService';
 import { ScoreBand } from '../types/score';
 import { bandFromScore } from '../utils/bandFromScore';
@@ -83,6 +84,7 @@ function extractVehicleNumbers(rows: ParsedCsvRow[]) {
 
 export default function BatchProcessing() {
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const branding = useBranding();
   const [fileName, setFileName] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -182,7 +184,7 @@ export default function BatchProcessing() {
         setLoading(true);
         setSubmittedCount(vehicleNumbers.length);
         setBatchResponse(null);
-        setStatusLabel('Processing on DBS-Bajaj API');
+        setStatusLabel(`Processing on ${branding.apiName}`);
         setProgressPercent(28);
 
         try {
@@ -219,7 +221,7 @@ export default function BatchProcessing() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = 'dbs_bajaj_batch_template.csv';
+    link.download = `${branding.filePrefix}_batch_template.csv`;
     link.click();
     URL.revokeObjectURL(url);
   };
@@ -243,7 +245,7 @@ export default function BatchProcessing() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = 'dbs_bajaj_batch_results.csv';
+    link.download = `${branding.filePrefix}_batch_results.csv`;
     link.click();
     URL.revokeObjectURL(url);
   };
@@ -367,7 +369,7 @@ export default function BatchProcessing() {
             <tr>
               <th>Registration No.</th>
               {/* <th>Vehicle Type</th> */}
-              <th>DBS</th>
+              <th>{branding.shortName}</th>
               <th>Band</th>
               <th>Violations</th>
               <th>Premium Modifier (%)</th>

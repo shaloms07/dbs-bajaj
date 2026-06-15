@@ -63,6 +63,7 @@ function toAuthSession(
     refreshTokenExpiresAt: 'refresh_expires_in' in data ? toExpiryTimestamp(data.refresh_expires_in) : null,
     user: {
       name: 'name' in data && typeof data.name === 'string' ? data.name : fallbackUsername || 'User',
+      username: fallbackUsername,
       email: 'email' in data && typeof data.email === 'string' ? data.email : fallbackUsername
     }
   };

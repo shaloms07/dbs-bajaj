@@ -253,6 +253,43 @@ samp {
   letter-spacing: -0.02em;
 }
 
+.topbar-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-right: 18px;
+  border-right: 1px solid var(--border);
+}
+
+.topbar-brand-logo {
+  width: 72px;
+  max-height: 28px;
+  height: auto;
+  object-fit: contain;
+  display: block;
+}
+
+.topbar-brand-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.topbar-brand-copy span {
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text3);
+  font-family: var(--font-mono);
+}
+
+.topbar-brand-copy strong {
+  font-size: 13px;
+  color: var(--text);
+  letter-spacing: -0.02em;
+}
+
 .topbar-right {
   margin-left: auto;
   display: flex;
