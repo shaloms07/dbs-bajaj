@@ -148,13 +148,6 @@ export async function fetchScore(regNo: string, includeRc = false): Promise<Scor
 
   const data = (await response.json().catch(() => null)) as LookupResponse | { detail?: string; message?: string } | null;
 
-  console.log('[Vehicle Lookup API]', {
-    regNo: norm,
-    includeRc,
-    status: response.status,
-    response: data
-  });
-
   if (!response.ok) {
     if (response.status === 401) {
       useAuthStore.getState().clearAuth();

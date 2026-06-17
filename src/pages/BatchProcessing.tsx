@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Papa, { ParseResult } from 'papaparse';
+import { useNavigate } from 'react-router-dom';
 import { useBranding } from '../branding/useBranding';
 import { submitBatch, BatchLookupResponse, BatchLookupResult } from '../services/batchService';
 import { ScoreBand } from '../types/score';
@@ -85,6 +86,7 @@ function extractVehicleNumbers(rows: ParsedCsvRow[]) {
 export default function BatchProcessing() {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const branding = useBranding();
+  const navigate = useNavigate();
   const [fileName, setFileName] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -228,6 +230,7 @@ export default function BatchProcessing() {
 
   const exportResults = () => {
     if (!filteredResults.length) return;
+    if (!window.confirm('Export these batch results? The file may contain sensitive vehicle and score data.')) return;
 
     const csv = Papa.unparse(
       filteredResults.map((row) => ({
@@ -237,7 +240,8 @@ export default function BatchProcessing() {
         score: row.score,
         risk_level: row.normalizedBand,
         premium_modifier_pct: row.premium_modifier_pct,
-        total_violations: row.total_violations
+        total_violations: row.total_violations,
+        exported_at: new Date().toISOString()
       }))
     );
 
@@ -251,7 +255,11 @@ export default function BatchProcessing() {
   };
 
   const openVehicleLookup = (vehicleNumber: string) => {
-    window.open(`/lookup?regNo=${encodeURIComponent(normalizeVehicleNumber(vehicleNumber))}`, '_blank', 'noopener,noreferrer');
+    navigate('/lookup', {
+      state: {
+        regNo: normalizeVehicleNumber(vehicleNumber)
+      }
+    });
   };
 
   return (

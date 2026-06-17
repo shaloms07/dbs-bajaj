@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useBranding } from '../branding/useBranding';
 import { useApiKeys, useCreateApiKey, useDeleteApiKey, useRenameApiKey } from '../hooks/useApiKeys';
 import { ApiKeyItem, CreateApiKeyResponse } from '../services/apiKeyService';
@@ -68,6 +68,12 @@ function formatDate(value: string | null) {
     hour: '2-digit',
     minute: '2-digit'
   });
+}
+
+function maskSecret(value: string) {
+  if (!value) return '';
+  const suffix = value.slice(-4);
+  return `${'*'.repeat(Math.max(value.length - 4, 12))}${suffix}`;
 }
 
 function ApiKeyRow({
@@ -166,6 +172,7 @@ export default function APIConsole() {
   const [newKeyName, setNewKeyName] = useState('');
   const [createdKey, setCreatedKey] = useState<CreateApiKeyResponse | null>(null);
   const [copiedValue, setCopiedValue] = useState('');
+  const [showCreatedKey, setShowCreatedKey] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState('');
   const [revokedKeys, setRevokedKeys] = useState<ApiKeyItem[]>([]);
@@ -178,6 +185,19 @@ export default function APIConsole() {
     const apiKeyIds = new Set(apiKeys.map((key) => key.id));
     return [...apiKeys, ...revokedKeys.filter((key) => !apiKeyIds.has(key.id))];
   }, [apiKeys, revokedKeys]);
+
+  useEffect(() => {
+    if (!createdKey) return;
+
+    setShowCreatedKey(false);
+    const timeoutId = window.setTimeout(() => {
+      setCreatedKey(null);
+      setCopiedValue('');
+      setShowCreatedKey(false);
+    }, 2 * 60 * 1000);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [createdKey]);
 
   async function copyText(value: string) {
     try {
@@ -197,6 +217,7 @@ export default function APIConsole() {
 
     const result = await createMutation.mutateAsync(trimmedName);
     setCreatedKey(result);
+    setShowCreatedKey(false);
     setNewKeyName('');
   }
 
@@ -296,12 +317,20 @@ export default function APIConsole() {
             <div className="api-key-created">
               <div className="field-label">New API Key</div>
               <div className="api-key-box">
-                <div className="api-key-value">{createdKey.raw_key}</div>
+                <div className="api-key-value">{showCreatedKey ? createdKey.raw_key : maskSecret(createdKey.raw_key)}</div>
+                <button className="api-action-btn" onClick={() => setShowCreatedKey((current) => !current)}>
+                  {showCreatedKey ? 'Hide' : 'Reveal'}
+                </button>
                 <button className="api-action-btn" onClick={() => copyText(createdKey.raw_key)}>
                   {copiedValue === createdKey.raw_key ? 'Copied' : 'Copy'}
                 </button>
+                <button className="api-action-btn" onClick={() => setCreatedKey(null)}>
+                  Clear
+                </button>
               </div>
-              <div className="api-key-message api-key-warning">{createdKey.warning}</div>
+              <div className="api-key-message api-key-warning">
+                {createdKey.warning} This value is hidden by default and will be cleared from this screen automatically.
+              </div>
             </div>
           ) : null}
           <div className="api-key-summary">

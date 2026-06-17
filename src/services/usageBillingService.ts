@@ -122,11 +122,6 @@ export async function fetchUsageBillingSummary(): Promise<UsageBillingSummaryRes
 
   const data = (await response.json().catch(() => null)) as UsageBillingSummaryResponse | ApiErrorResponse | null;
 
-  console.log('[Usage Billing API]', {
-    status: response.status,
-    response: data
-  });
-
   if (!response.ok) {
     if (response.status === 401) {
       useAuthStore.getState().clearAuth();

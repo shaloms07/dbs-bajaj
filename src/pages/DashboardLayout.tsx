@@ -32,30 +32,28 @@ export default function DashboardLayout() {
 
     let cancelled = false;
 
-    const checkSession = async (reason: string) => {
+    const checkSession = async () => {
       try {
         await ensureValidAccessToken();
-      } catch (error) {
-        if (!cancelled) {
-          console.warn(`[auth] Background session check failed during ${reason}`, error);
-        }
+      } catch {
+        // Session failures are handled by protected API calls and logout state.
       }
     };
 
-    void checkSession('layout-mount');
+    void checkSession();
 
     const intervalId = window.setInterval(() => {
-      void checkSession('interval');
+      void checkSession();
     }, 60 * 1000);
 
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
-        void checkSession('tab-visible');
+        void checkSession();
       }
     };
 
     const handleWindowFocus = () => {
-      void checkSession('window-focus');
+      void checkSession();
     };
 
     document.addEventListener('visibilitychange', handleVisibilityChange);

@@ -78,7 +78,5 @@ export async function submitBatch(vehicleNumbers: string[]): Promise<BatchLookup
     throw new Error('Batch lookup response is invalid');
   }
 
-  console.log('Batch lookup API response:', data);
-
   return data;
 }

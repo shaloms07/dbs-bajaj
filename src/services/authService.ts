@@ -175,16 +175,12 @@ export async function ensureValidAccessToken(forceRefresh = false): Promise<stri
   if (!refreshInFlight) {
     refreshInFlight = refreshAccessToken(authState.refreshToken)
       .then((session) => {
-        console.info('[auth] Access token refreshed successfully');
         persistRefreshedSession(session);
         return session;
       })
       .catch((error) => {
         if (isSessionExpiredError(error)) {
-          console.warn('[auth] Refresh token expired or rejected; clearing local auth state');
           useAuthStore.getState().clearAuth();
-        } else {
-          console.warn('[auth] Token refresh failed without invalidating local session', error);
         }
         throw error;
       })
