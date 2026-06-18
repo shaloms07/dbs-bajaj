@@ -109,7 +109,7 @@ samp {
 }
 
 .insurer-badge {
-  margin: 14px 20px 0;
+  margin: 10px 10px 0;
   background: rgba(255, 255, 255, 0.12);
   border: 1px solid rgba(255, 255, 255, 0.18);
   border-radius: 12px;
@@ -129,7 +129,7 @@ samp {
 
 .nav {
   flex: 1;
-  padding: 20px 12px;
+  padding: 10px 12px;
   display: flex;
   flex-direction: column;
   gap: 2px;

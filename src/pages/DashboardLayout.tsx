@@ -78,8 +78,8 @@ export default function DashboardLayout() {
   return (
     <>
       <aside className="sidebar">
-        <div className="sidebar-logo" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <img src={dbsLogo} alt="DBS platform logo" style={{ width: '70%', objectFit: 'contain' }} />
+        <div className="sidebar-logo" style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <img src={dbsLogo} alt="DBS platform logo" style={{ width: '40%', objectFit: 'contain' }} />
           <div className="logo-sub">
             {/* <span style={{ display: 'block', whiteSpace: 'nowrap' }}>Vehicle risk</span> */}
             {/* <span style={{ display: 'block', whiteSpace: 'nowrap' }}>underwriting</span> */}
