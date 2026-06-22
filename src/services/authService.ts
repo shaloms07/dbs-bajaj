@@ -145,10 +145,6 @@ function persistRefreshedSession(session: AuthSession) {
 export async function ensureValidAccessToken(forceRefresh = false): Promise<string> {
   const authState = useAuthStore.getState();
 
-  if (!authState.token) {
-    throw new AuthError('Missing auth token', 'auth_required');
-  }
-
   const hasRefreshToken = Boolean(authState.refreshToken);
   const refreshTokenExpired =
     typeof authState.refreshTokenExpiresAt === 'number' && authState.refreshTokenExpiresAt <= Date.now();
@@ -165,11 +161,11 @@ export async function ensureValidAccessToken(forceRefresh = false): Promise<stri
       authState.accessTokenExpiresAt - Date.now() <= ACCESS_TOKEN_REFRESH_BUFFER_MS);
 
   if (!shouldRefresh) {
-    return authState.token;
+    return authState.token ?? '';
   }
 
   if (!authState.refreshToken) {
-    return authState.token;
+    return authState.token ?? '';
   }
 
   if (!refreshInFlight) {
