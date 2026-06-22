@@ -116,6 +116,16 @@ export default function Login() {
             <button type="submit" disabled={loading} className="login-submit">
               {loading ? 'Signing in...' : 'Sign in'}
             </button>
+
+            <div className="login-back-container">
+              <button
+                type="button"
+                onClick={() => navigate('/')}
+                className="login-back-link"
+              >
+                ← Back to Home
+              </button>
+            </div>
           </form>
 
           <div className="login-footer-note">{branding.underwritingConsoleLabel}</div>

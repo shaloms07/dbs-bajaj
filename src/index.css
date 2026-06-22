@@ -3056,11 +3056,11 @@ tbody td {
   position: relative;
   z-index: 1;
   min-height: 100vh;
-  padding: 56px clamp(28px, 4vw, 64px);
+  padding: 28px clamp(28px, 4vw, 64px);
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: 18px;
+  gap: 9px;
   max-width: 760px;
 }
 
@@ -3329,3 +3329,27 @@ tbody td {
     position: static;
   }
 }
+
+.login-back-container {
+  display: flex;
+  justify-content: center;
+  margin-top: 18px;
+}
+
+.login-back-link {
+  background: none;
+  border: none;
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+  transition: color 0.15s ease, background-color 0.15s ease;
+}
+
+.login-back-link:hover {
+  color: var(--accent2);
+  background-color: var(--surface2);
+}
+
