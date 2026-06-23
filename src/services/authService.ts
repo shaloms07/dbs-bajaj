@@ -1,16 +1,14 @@
-import { AuthUser, useAuthStore } from '../store/authStore';
-
-const DEFAULT_API_BASE_URL = 'https://citihubkiosk.com/dbs';
-const apiBaseUrl = (import.meta.env.VITE_DBS_API_BASE_URL || DEFAULT_API_BASE_URL).replace(/\/+$/, '');
+import { AuthUser } from '../store/authStore';
+import { apiBaseUrl, apiFetch, getApiErrorMessage, parseJson } from './apiClient';
 
 export interface LoginResponse {
-  email: string;
-  name: string;
-  access_token: string;
-  refresh_token: string;
-  token_type: string;
-  access_expires_in: number;
-  refresh_expires_in: number;
+  email?: string;
+  name?: string;
+  username?: string;
+  insurer?: string;
+  user?: Partial<AuthUser>;
+  detail?: string;
+  message?: string;
 }
 
 export interface LoginPayload {
@@ -19,176 +17,56 @@ export interface LoginPayload {
 }
 
 export interface AuthSession {
-  token: string;
-  refreshToken: string | null;
-  accessTokenExpiresAt: number | null;
-  refreshTokenExpiresAt: number | null;
   user: AuthUser;
 }
 
-type AuthErrorCode = 'auth_required' | 'session_expired' | 'refresh_failed' | 'network_error' | 'invalid_response';
+function toAuthUser(data: LoginResponse | null, fallbackUsername: string): AuthUser {
+  const responseUser = data?.user && typeof data.user === 'object' ? data.user : {};
+  const name = responseUser.name ?? data?.name ?? fallbackUsername;
+  const username = responseUser.username ?? data?.username ?? fallbackUsername;
+  const email = responseUser.email ?? data?.email;
+  const insurer = responseUser.insurer ?? data?.insurer;
 
-class AuthError extends Error {
-  status?: number;
-  code: AuthErrorCode;
-
-  constructor(message: string, code: AuthErrorCode, status?: number) {
-    super(message);
-    this.name = 'AuthError';
-    this.code = code;
-    this.status = status;
-  }
-}
-
-const ACCESS_TOKEN_REFRESH_BUFFER_MS = 60 * 1000;
-
-let refreshInFlight: Promise<AuthSession> | null = null;
-
-function toExpiryTimestamp(expiresInSeconds?: number): number | null {
-  return typeof expiresInSeconds === 'number' && expiresInSeconds > 0 ? Date.now() + expiresInSeconds * 1000 : null;
-}
-
-function toAuthSession(
-  data: Partial<LoginResponse> | { detail?: string; message?: string } | null,
-  fallbackUsername?: string
-): AuthSession {
-  if (!data || !('access_token' in data) || typeof data.access_token !== 'string') {
-    throw new AuthError('Login response is missing access token', 'invalid_response');
+  if (typeof name !== 'string' || !name.trim()) {
+    throw new Error('Login response is missing user details');
   }
 
   return {
-    token: data.access_token,
-    refreshToken: 'refresh_token' in data && typeof data.refresh_token === 'string' ? data.refresh_token : null,
-    accessTokenExpiresAt: 'access_expires_in' in data ? toExpiryTimestamp(data.access_expires_in) : null,
-    refreshTokenExpiresAt: 'refresh_expires_in' in data ? toExpiryTimestamp(data.refresh_expires_in) : null,
-    user: {
-      name: 'name' in data && typeof data.name === 'string' ? data.name : fallbackUsername || 'User',
-      username: fallbackUsername,
-      email: 'email' in data && typeof data.email === 'string' ? data.email : fallbackUsername
-    }
+    name,
+    username: typeof username === 'string' && username ? username : undefined,
+    email: typeof email === 'string' && email ? email : undefined,
+    insurer: typeof insurer === 'string' && insurer ? insurer : undefined
   };
 }
 
 export async function login(payload: LoginPayload): Promise<AuthSession> {
-  const response = await fetch(`${apiBaseUrl}/auth/login`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify(payload)
-  });
+  const username = payload.username.trim();
 
-  const data = (await response.json().catch(() => null)) as Partial<LoginResponse> | { detail?: string; message?: string } | null;
-
-  if (!response.ok) {
-    const message =
-      (data && 'detail' in data && typeof data.detail === 'string' && data.detail) ||
-      (data && 'message' in data && typeof data.message === 'string' && data.message) ||
-      'Login failed';
-    throw new Error(message);
+  if (!username || !payload.password) {
+    throw new Error('Enter credentials');
   }
 
-  return toAuthSession(data, payload.username);
-}
-
-export async function refreshAccessToken(refreshToken: string): Promise<AuthSession> {
   let response: Response;
 
   try {
-    response = await fetch(`${apiBaseUrl}/auth/refresh`, {
+    response = await apiFetch(`${apiBaseUrl}/auth/login`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({ refresh_token: refreshToken })
+      body: JSON.stringify({ username, password: payload.password })
     });
   } catch (error) {
-    throw new AuthError(
-      error instanceof Error ? error.message : 'Unable to reach auth server for token refresh',
-      'network_error'
-    );
+    throw new Error(error instanceof Error ? error.message : 'Unable to reach auth server');
   }
 
-  const data = (await response.json().catch(() => null)) as Partial<LoginResponse> | { detail?: string; message?: string } | null;
+  const data = await parseJson<LoginResponse>(response);
 
   if (!response.ok) {
-    const message =
-      (data && 'detail' in data && typeof data.detail === 'string' && data.detail) ||
-      (data && 'message' in data && typeof data.message === 'string' && data.message) ||
-      'Token refresh failed';
-    throw new AuthError(message, response.status === 401 || response.status === 403 ? 'session_expired' : 'refresh_failed', response.status);
+    throw new Error(getApiErrorMessage(data, 'Login failed'));
   }
 
-  return toAuthSession(data);
-}
-
-export function isSessionExpiredError(error: unknown): boolean {
-  return error instanceof AuthError && error.code === 'session_expired';
-}
-
-function persistRefreshedSession(session: AuthSession) {
-  const authState = useAuthStore.getState();
-  useAuthStore.getState().setAuth(
-    session.token,
-    authState.user
-      ? {
-          ...authState.user,
-          ...session.user
-        }
-      : session.user,
-    session.refreshToken ?? authState.refreshToken,
-    session.accessTokenExpiresAt,
-    session.refreshTokenExpiresAt
-  );
-}
-
-export async function ensureValidAccessToken(forceRefresh = false): Promise<string> {
-  const authState = useAuthStore.getState();
-
-  if (!authState.token) {
-    throw new AuthError('Missing auth token', 'auth_required');
-  }
-
-  const hasRefreshToken = Boolean(authState.refreshToken);
-  const refreshTokenExpired =
-    typeof authState.refreshTokenExpiresAt === 'number' && authState.refreshTokenExpiresAt <= Date.now();
-
-  if (refreshTokenExpired) {
-    useAuthStore.getState().clearAuth();
-    throw new AuthError('Session expired. Please sign in again.', 'session_expired');
-  }
-
-  const shouldRefresh =
-    forceRefresh ||
-    (hasRefreshToken &&
-      typeof authState.accessTokenExpiresAt === 'number' &&
-      authState.accessTokenExpiresAt - Date.now() <= ACCESS_TOKEN_REFRESH_BUFFER_MS);
-
-  if (!shouldRefresh) {
-    return authState.token;
-  }
-
-  if (!authState.refreshToken) {
-    return authState.token;
-  }
-
-  if (!refreshInFlight) {
-    refreshInFlight = refreshAccessToken(authState.refreshToken)
-      .then((session) => {
-        persistRefreshedSession(session);
-        return session;
-      })
-      .catch((error) => {
-        if (isSessionExpiredError(error)) {
-          useAuthStore.getState().clearAuth();
-        }
-        throw error;
-      })
-      .finally(() => {
-        refreshInFlight = null;
-      });
-  }
-
-  const refreshed = await refreshInFlight;
-  return refreshed.token;
+  return {
+    user: toAuthUser(data, username)
+  };
 }

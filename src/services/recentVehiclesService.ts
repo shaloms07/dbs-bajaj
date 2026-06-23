@@ -1,4 +1,4 @@
-import { ApiErrorResponse, apiBaseUrl, clearSessionOnAuthError, fetchWithCookies, getApiErrorMessage, parseJson } from './apiClient';
+import { ApiErrorResponse, apiBaseUrl, apiFetch, clearSessionOnAuthError, getApiErrorMessage, parseJson } from './apiClient';
 
 export interface RecentVehicleItem {
   vehicle_number: string;
@@ -16,7 +16,7 @@ function mapRecentVehicleItem(value: unknown): RecentVehicleItem {
 }
 
 export async function fetchRecentVehicles(): Promise<RecentVehicleItem[]> {
-  const response = await fetchWithCookies(`${apiBaseUrl}/dashboard/usage/recent-vehicles`, {
+  const response = await apiFetch(`${apiBaseUrl}/dashboard/usage/recent-vehicles`, {
     method: 'GET'
   });
   const data = await parseJson<RecentVehicleItem[] | ApiErrorResponse>(response);

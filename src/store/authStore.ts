@@ -25,7 +25,7 @@ function legacyStorageKey(name: string) {
   return `${LEGACY_STORAGE_PREFIX}${name}`;
 }
 
-function clearLegacyTokenStorage() {
+function clearTokenStorage() {
   localStorage.removeItem(storageKey('token'));
   localStorage.removeItem(storageKey('refresh_token'));
   localStorage.removeItem(storageKey('access_token_expires_at'));
@@ -40,12 +40,12 @@ export const useAuthStore = create<AuthState>((set) => ({
   user: null,
   isAuthenticated: false,
   setAuth: (user) => {
-    clearLegacyTokenStorage();
+    clearTokenStorage();
     localStorage.setItem(storageKey('user'), JSON.stringify(user));
     set({ user, isAuthenticated: true });
   },
   clearAuth: () => {
-    clearLegacyTokenStorage();
+    clearTokenStorage();
     localStorage.removeItem(storageKey('user'));
     localStorage.removeItem(legacyStorageKey('user'));
     set({ user: null, isAuthenticated: false });
@@ -53,7 +53,7 @@ export const useAuthStore = create<AuthState>((set) => ({
 }));
 
 export function hydrateAuth() {
-  clearLegacyTokenStorage();
+  clearTokenStorage();
 
   const userJson = localStorage.getItem(storageKey('user')) ?? localStorage.getItem(legacyStorageKey('user'));
 

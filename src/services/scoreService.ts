@@ -1,5 +1,5 @@
 import { ScoreBand, ScoreResult, Violation } from '../types/score';
-import { ApiErrorResponse, apiBaseUrl, clearSessionOnAuthError, fetchWithCookies, getApiErrorMessage, parseJson } from './apiClient';
+import { ApiErrorResponse, apiBaseUrl, apiFetch, clearSessionOnAuthError, getApiErrorMessage, parseJson } from './apiClient';
 
 interface LookupViolationResponse {
   challan_details?: string;
@@ -123,7 +123,7 @@ export async function fetchScore(regNo: string, includeRc = false): Promise<Scor
     throw new Error('Vehicle number is required');
   }
 
-  const response = await fetchWithCookies(
+  const response = await apiFetch(
     `${apiBaseUrl}/dashboard/lookup/${encodeURIComponent(norm)}?include_rc=${includeRc ? 'true' : 'false'}`,
     {
       method: 'GET'

@@ -33,7 +33,7 @@ export function clearSessionOnAuthError(response: Response) {
   }
 }
 
-export async function fetchWithCookies(input: RequestInfo | URL, init: RequestInit = {}) {
+export async function apiFetch(input: RequestInfo | URL, init: RequestInit = {}) {
   return fetch(input, {
     ...init,
     credentials: 'include'
