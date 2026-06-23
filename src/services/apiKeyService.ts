@@ -1,8 +1,8 @@
 import {
   ApiErrorResponse,
   apiBaseUrl,
+  apiFetch,
   clearSessionOnAuthError,
-  fetchWithCookies,
   getApiErrorMessage,
   parseApiError,
   parseJson
@@ -50,7 +50,7 @@ function isApiKeyItem(value: unknown): value is ApiKeyItem {
 }
 
 export async function fetchApiKeys(): Promise<ApiKeyItem[]> {
-  const response = await fetchWithCookies(`${apiBaseUrl}/auth/api-keys`, {
+  const response = await apiFetch(`${apiBaseUrl}/auth/api-keys`, {
     method: 'GET'
   });
 
@@ -70,7 +70,7 @@ export async function fetchApiKeys(): Promise<ApiKeyItem[]> {
 
 export async function createApiKey(name: string): Promise<CreateApiKeyResponse> {
   const normalizedName = normalizeKeyName(name);
-  const response = await fetchWithCookies(`${apiBaseUrl}/auth/api-keys`, {
+  const response = await apiFetch(`${apiBaseUrl}/auth/api-keys`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'
@@ -96,7 +96,7 @@ export async function renameApiKey(keyId: string, name: string): Promise<ApiKeyI
   assertKeyId(keyId);
   const normalizedName = normalizeKeyName(name);
 
-  const response = await fetchWithCookies(`${apiBaseUrl}/auth/api-keys/${encodeURIComponent(keyId)}`, {
+  const response = await apiFetch(`${apiBaseUrl}/auth/api-keys/${encodeURIComponent(keyId)}`, {
     method: 'PATCH',
     headers: {
       'Content-Type': 'application/json'
@@ -121,7 +121,7 @@ export async function renameApiKey(keyId: string, name: string): Promise<ApiKeyI
 export async function deleteApiKey(keyId: string): Promise<void> {
   assertKeyId(keyId);
 
-  const response = await fetchWithCookies(`${apiBaseUrl}/auth/api-keys/${encodeURIComponent(keyId)}`, {
+  const response = await apiFetch(`${apiBaseUrl}/auth/api-keys/${encodeURIComponent(keyId)}`, {
     method: 'DELETE'
   });
 

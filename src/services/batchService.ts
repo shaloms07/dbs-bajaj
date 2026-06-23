@@ -1,4 +1,4 @@
-import { ApiErrorResponse, apiBaseUrl, clearSessionOnAuthError, fetchWithCookies, getApiErrorMessage, parseJson } from './apiClient';
+import { ApiErrorResponse, apiBaseUrl, apiFetch, clearSessionOnAuthError, getApiErrorMessage, parseJson } from './apiClient';
 
 export interface BatchLookupResult {
   vehicle_number: string;
@@ -39,7 +39,7 @@ function isBatchLookupResponse(value: unknown): value is BatchLookupResponse {
 
 export async function submitBatch(vehicleNumbers: string[]): Promise<BatchLookupResponse> {
   const normalizedVehicleNumbers = normalizeVehicleNumbers(vehicleNumbers);
-  const response = await fetchWithCookies(`${apiBaseUrl}/dashboard/lookup/batch?include_rc=false`, {
+  const response = await apiFetch(`${apiBaseUrl}/dashboard/lookup/batch?include_rc=false`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'

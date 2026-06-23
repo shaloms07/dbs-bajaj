@@ -1,5 +1,5 @@
 import { AuthUser } from '../store/authStore';
-import { apiBaseUrl, fetchWithCookies, getApiErrorMessage, parseJson } from './apiClient';
+import { apiBaseUrl, apiFetch, getApiErrorMessage, parseJson } from './apiClient';
 
 export interface LoginResponse {
   email?: string;
@@ -49,7 +49,7 @@ export async function login(payload: LoginPayload): Promise<AuthSession> {
   let response: Response;
 
   try {
-    response = await fetchWithCookies(`${apiBaseUrl}/auth/login`, {
+    response = await apiFetch(`${apiBaseUrl}/auth/login`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'

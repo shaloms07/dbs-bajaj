@@ -1,4 +1,4 @@
-import { ApiErrorResponse, apiBaseUrl, clearSessionOnAuthError, fetchWithCookies, getApiErrorMessage, parseJson } from './apiClient';
+import { ApiErrorResponse, apiBaseUrl, apiFetch, clearSessionOnAuthError, getApiErrorMessage, parseJson } from './apiClient';
 
 export interface UsageBillingBucketItem {
   period_start: string;
@@ -86,7 +86,7 @@ function mapUsageBillingSummaryResponse(value: unknown): UsageBillingSummaryResp
 }
 
 export async function fetchUsageBillingSummary(): Promise<UsageBillingSummaryResponse> {
-  const response = await fetchWithCookies(`${apiBaseUrl}/dashboard/usage/summary`, {
+  const response = await apiFetch(`${apiBaseUrl}/dashboard/usage/summary`, {
     method: 'GET'
   });
   const data = await parseJson<UsageBillingSummaryResponse | ApiErrorResponse>(response);
