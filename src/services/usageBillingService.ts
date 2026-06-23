@@ -1,8 +1,4 @@
-import { useAuthStore } from '../store/authStore';
-import { ensureValidAccessToken, isSessionExpiredError } from './authService';
-
-const DEFAULT_API_BASE_URL = 'https://citihubkiosk.com/dbs';
-const apiBaseUrl = (import.meta.env.VITE_DBS_API_BASE_URL || DEFAULT_API_BASE_URL).replace(/\/+$/, '');
+import { ApiErrorResponse, apiBaseUrl, clearSessionOnAuthError, fetchWithCookies, getApiErrorMessage, parseJson } from './apiClient';
 
 export interface UsageBillingBucketItem {
   period_start: string;
@@ -35,11 +31,6 @@ export interface UsageBillingSummaryResponse {
   current_month: UsageBillingWindow;
   last_12_months: UsageBillingWindow;
 }
-
-type ApiErrorResponse = {
-  detail?: string;
-  message?: string;
-};
 
 function toNumber(value: unknown, fallback = 0) {
   if (typeof value === 'number' && Number.isFinite(value)) return value;
@@ -94,43 +85,15 @@ function mapUsageBillingSummaryResponse(value: unknown): UsageBillingSummaryResp
   };
 }
 
-async function requestUsageBillingSummary(accessToken: string) {
-  return fetch(`${apiBaseUrl}/dashboard/usage/summary`, {
-    method: 'GET',
-    headers: {
-      Authorization: `Bearer ${accessToken}`
-    }
-  });
-}
-
 export async function fetchUsageBillingSummary(): Promise<UsageBillingSummaryResponse> {
-  let token = await ensureValidAccessToken();
-
-  let response = await requestUsageBillingSummary(token);
-
-  if (response.status === 401) {
-    try {
-      token = await ensureValidAccessToken(true);
-      response = await requestUsageBillingSummary(token);
-    } catch (error) {
-      if (isSessionExpiredError(error)) {
-        throw new Error('Session expired. Please sign in again.');
-      }
-      throw error instanceof Error ? error : new Error('Unable to refresh session');
-    }
-  }
-
-  const data = (await response.json().catch(() => null)) as UsageBillingSummaryResponse | ApiErrorResponse | null;
+  const response = await fetchWithCookies(`${apiBaseUrl}/dashboard/usage/summary`, {
+    method: 'GET'
+  });
+  const data = await parseJson<UsageBillingSummaryResponse | ApiErrorResponse>(response);
 
   if (!response.ok) {
-    if (response.status === 401) {
-      useAuthStore.getState().clearAuth();
-    }
-    const message =
-      (data && 'detail' in data && typeof data.detail === 'string' && data.detail) ||
-      (data && 'message' in data && typeof data.message === 'string' && data.message) ||
-      'Unable to fetch usage summary';
-    throw new Error(message);
+    clearSessionOnAuthError(response);
+    throw new Error(getApiErrorMessage(data, 'Unable to fetch usage summary'));
   }
 
   return mapUsageBillingSummaryResponse(data);

@@ -1,19 +1,10 @@
-import { useAuthStore } from '../store/authStore';
-import { ensureValidAccessToken, isSessionExpiredError } from './authService';
-
-const DEFAULT_API_BASE_URL = 'https://citihubkiosk.com/dbs';
-const apiBaseUrl = (import.meta.env.VITE_DBS_API_BASE_URL || DEFAULT_API_BASE_URL).replace(/\/+$/, '');
+import { ApiErrorResponse, apiBaseUrl, clearSessionOnAuthError, fetchWithCookies, getApiErrorMessage, parseJson } from './apiClient';
 
 export interface RecentVehicleItem {
   vehicle_number: string;
   risk_category: string;
   queried_at: string;
 }
-
-type ApiErrorResponse = {
-  detail?: string;
-  message?: string;
-};
 
 function mapRecentVehicleItem(value: unknown): RecentVehicleItem {
   const item = value && typeof value === 'object' ? (value as Record<string, unknown>) : {};
@@ -24,43 +15,15 @@ function mapRecentVehicleItem(value: unknown): RecentVehicleItem {
   };
 }
 
-async function requestRecentVehicles(accessToken: string) {
-  return fetch(`${apiBaseUrl}/dashboard/usage/recent-vehicles`, {
-    method: 'GET',
-    headers: {
-      Authorization: `Bearer ${accessToken}`
-    }
-  });
-}
-
 export async function fetchRecentVehicles(): Promise<RecentVehicleItem[]> {
-  let token = await ensureValidAccessToken();
-
-  let response = await requestRecentVehicles(token);
-
-  if (response.status === 401) {
-    try {
-      token = await ensureValidAccessToken(true);
-      response = await requestRecentVehicles(token);
-    } catch (error) {
-      if (isSessionExpiredError(error)) {
-        throw new Error('Session expired. Please sign in again.');
-      }
-      throw error instanceof Error ? error : new Error('Unable to refresh session');
-    }
-  }
-
-  const data = (await response.json().catch(() => null)) as RecentVehicleItem[] | ApiErrorResponse | null;
+  const response = await fetchWithCookies(`${apiBaseUrl}/dashboard/usage/recent-vehicles`, {
+    method: 'GET'
+  });
+  const data = await parseJson<RecentVehicleItem[] | ApiErrorResponse>(response);
 
   if (!response.ok) {
-    if (response.status === 401) {
-      useAuthStore.getState().clearAuth();
-    }
-    const message =
-      (data && 'detail' in data && typeof data.detail === 'string' && data.detail) ||
-      (data && 'message' in data && typeof data.message === 'string' && data.message) ||
-      'Unable to fetch recent vehicles';
-    throw new Error(message);
+    clearSessionOnAuthError(response);
+    throw new Error(getApiErrorMessage(data, 'Unable to fetch recent vehicles'));
   }
 
   if (!Array.isArray(data)) {

@@ -1,8 +1,12 @@
-import { useAuthStore } from '../store/authStore';
-import { ensureValidAccessToken, isSessionExpiredError } from './authService';
-
-const DEFAULT_API_BASE_URL = 'https://citihubkiosk.com/dbs';
-const apiBaseUrl = (import.meta.env.VITE_DBS_API_BASE_URL || DEFAULT_API_BASE_URL).replace(/\/+$/, '');
+import {
+  ApiErrorResponse,
+  apiBaseUrl,
+  clearSessionOnAuthError,
+  fetchWithCookies,
+  getApiErrorMessage,
+  parseApiError,
+  parseJson
+} from './apiClient';
 
 export interface ApiKeyItem {
   id: string;
@@ -18,64 +22,46 @@ export interface CreateApiKeyResponse extends ApiKeyItem {
   warning: string;
 }
 
-type ApiErrorResponse = {
-  detail?: string;
-  message?: string;
-};
-
-async function withAuthorizedRequest(execute: (token: string) => Promise<Response>) {
-  let token = await ensureValidAccessToken();
-
-  let response = await execute(token);
-
-  if (response.status === 401) {
-    try {
-      token = await ensureValidAccessToken(true);
-      response = await execute(token);
-    } catch (error) {
-      if (isSessionExpiredError(error)) {
-        throw new Error('Session expired. Please sign in again.');
-      }
-      throw error instanceof Error ? error : new Error('Unable to refresh session');
-    }
+function assertKeyId(keyId: string) {
+  if (!keyId.trim()) {
+    throw new Error('API key id is required');
   }
-
-  return response;
 }
 
-async function parseError(response: Response, fallbackMessage: string) {
-  const data = (await response.json().catch(() => null)) as ApiErrorResponse | null;
+function normalizeKeyName(name: string) {
+  const trimmedName = name.trim();
+  if (!trimmedName) {
+    throw new Error('API key name is required');
+  }
+  return trimmedName;
+}
 
-  return (
-    (data && typeof data.detail === 'string' && data.detail) ||
-    (data && typeof data.message === 'string' && data.message) ||
-    fallbackMessage
+function isApiKeyItem(value: unknown): value is ApiKeyItem {
+  const item = value && typeof value === 'object' ? (value as Record<string, unknown>) : null;
+  return Boolean(
+    item &&
+      typeof item.id === 'string' &&
+      typeof item.name === 'string' &&
+      typeof item.key_prefix === 'string' &&
+      typeof item.is_active === 'boolean' &&
+      typeof item.created_at === 'string' &&
+      (typeof item.last_used_at === 'string' || item.last_used_at === null)
   );
 }
 
 export async function fetchApiKeys(): Promise<ApiKeyItem[]> {
-  const response = await withAuthorizedRequest((token) =>
-    fetch(`${apiBaseUrl}/auth/api-keys`, {
-      method: 'GET',
-      headers: {
-        Authorization: `Bearer ${token}`
-      }
-    })
-  );
+  const response = await fetchWithCookies(`${apiBaseUrl}/auth/api-keys`, {
+    method: 'GET'
+  });
 
-  const data = (await response.json().catch(() => null)) as ApiKeyItem[] | ApiErrorResponse | null;
+  const data = await parseJson<ApiKeyItem[] | ApiErrorResponse>(response);
 
   if (!response.ok) {
-    if (response.status === 401) {
-      useAuthStore.getState().clearAuth();
-    }
-    throw new Error(
-      (data && !Array.isArray(data) && ((typeof data.detail === 'string' && data.detail) || (typeof data.message === 'string' && data.message))) ||
-        'Unable to fetch API keys'
-    );
+    clearSessionOnAuthError(response);
+    throw new Error(getApiErrorMessage(data, 'Unable to fetch API keys'));
   }
 
-  if (!Array.isArray(data)) {
+  if (!Array.isArray(data) || !data.every(isApiKeyItem)) {
     throw new Error('API keys response is invalid');
   }
 
@@ -83,30 +69,23 @@ export async function fetchApiKeys(): Promise<ApiKeyItem[]> {
 }
 
 export async function createApiKey(name: string): Promise<CreateApiKeyResponse> {
-  const response = await withAuthorizedRequest((token) =>
-    fetch(`${apiBaseUrl}/auth/api-keys`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ name })
-    })
-  );
+  const normalizedName = normalizeKeyName(name);
+  const response = await fetchWithCookies(`${apiBaseUrl}/auth/api-keys`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ name: normalizedName })
+  });
 
-  const data = (await response.json().catch(() => null)) as CreateApiKeyResponse | ApiErrorResponse | null;
+  const data = await parseJson<CreateApiKeyResponse | ApiErrorResponse>(response);
 
   if (!response.ok) {
-    if (response.status === 401) {
-      useAuthStore.getState().clearAuth();
-    }
-    throw new Error(
-      (data && !('raw_key' in data) && ((typeof data.detail === 'string' && data.detail) || (typeof data.message === 'string' && data.message))) ||
-        'Unable to create API key'
-    );
+    clearSessionOnAuthError(response);
+    throw new Error(getApiErrorMessage(data, 'Unable to create API key'));
   }
 
-  if (!data || !('raw_key' in data) || typeof data.raw_key !== 'string') {
+  if (!isApiKeyItem(data) || typeof data.raw_key !== 'string') {
     throw new Error('Create API key response is invalid');
   }
 
@@ -114,30 +93,25 @@ export async function createApiKey(name: string): Promise<CreateApiKeyResponse> 
 }
 
 export async function renameApiKey(keyId: string, name: string): Promise<ApiKeyItem> {
-  const response = await withAuthorizedRequest((token) =>
-    fetch(`${apiBaseUrl}/auth/api-keys/${encodeURIComponent(keyId)}`, {
-      method: 'PATCH',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ name })
-    })
-  );
+  assertKeyId(keyId);
+  const normalizedName = normalizeKeyName(name);
 
-  const data = (await response.json().catch(() => null)) as ApiKeyItem | ApiErrorResponse | null;
+  const response = await fetchWithCookies(`${apiBaseUrl}/auth/api-keys/${encodeURIComponent(keyId)}`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ name: normalizedName })
+  });
+
+  const data = await parseJson<ApiKeyItem | ApiErrorResponse>(response);
 
   if (!response.ok) {
-    if (response.status === 401) {
-      useAuthStore.getState().clearAuth();
-    }
-    throw new Error(
-      (data && !('id' in data) && ((typeof data.detail === 'string' && data.detail) || (typeof data.message === 'string' && data.message))) ||
-        'Unable to rename API key'
-    );
+    clearSessionOnAuthError(response);
+    throw new Error(getApiErrorMessage(data, 'Unable to rename API key'));
   }
 
-  if (!data || !('id' in data) || typeof data.id !== 'string') {
+  if (!isApiKeyItem(data)) {
     throw new Error('Rename API key response is invalid');
   }
 
@@ -145,23 +119,18 @@ export async function renameApiKey(keyId: string, name: string): Promise<ApiKeyI
 }
 
 export async function deleteApiKey(keyId: string): Promise<void> {
-  const response = await withAuthorizedRequest((token) =>
-    fetch(`${apiBaseUrl}/auth/api-keys/${encodeURIComponent(keyId)}`, {
-      method: 'DELETE',
-      headers: {
-        Authorization: `Bearer ${token}`
-      }
-    })
-  );
+  assertKeyId(keyId);
+
+  const response = await fetchWithCookies(`${apiBaseUrl}/auth/api-keys/${encodeURIComponent(keyId)}`, {
+    method: 'DELETE'
+  });
 
   if (response.status === 204) {
     return;
   }
 
   if (!response.ok) {
-    if (response.status === 401) {
-      useAuthStore.getState().clearAuth();
-    }
-    throw new Error(await parseError(response, 'Unable to revoke API key'));
+    clearSessionOnAuthError(response);
+    throw new Error(await parseApiError(response, 'Unable to revoke API key'));
   }
 }

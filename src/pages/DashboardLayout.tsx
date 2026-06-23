@@ -1,7 +1,6 @@
 import { useEffect } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useBranding } from '../branding/useBranding';
-import { ensureValidAccessToken } from '../services/authService';
 import { useAuthStore } from '../store/authStore';
 
 const pageTitles: Record<string, string> = {
@@ -17,55 +16,11 @@ const navItemClass = ({ isActive }: { isActive: boolean }) => `nav-item ${isActi
 export default function DashboardLayout() {
   const clearAuth = useAuthStore((state) => state.clearAuth);
   const user = useAuthStore((state) => state.user);
-  const token = useAuthStore((state) => state.token);
-  const refreshToken = useAuthStore((state) => state.refreshToken);
   const branding = useBranding();
   const location = useLocation();
   const pathKey = location.pathname.split('/').filter(Boolean).at(-1) ?? 'lookup';
   const activePage = pageTitles[pathKey] ?? 'Vehicle Lookup';
   const accountLabel = user?.username ?? user?.email ?? user?.name ?? 'Unknown user';
-
-  useEffect(() => {
-    if (!token || !refreshToken) {
-      return;
-    }
-
-    let cancelled = false;
-
-    const checkSession = async () => {
-      try {
-        await ensureValidAccessToken();
-      } catch {
-        // Session failures are handled by protected API calls and logout state.
-      }
-    };
-
-    void checkSession();
-
-    const intervalId = window.setInterval(() => {
-      void checkSession();
-    }, 60 * 1000);
-
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
-        void checkSession();
-      }
-    };
-
-    const handleWindowFocus = () => {
-      void checkSession();
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    window.addEventListener('focus', handleWindowFocus);
-
-    return () => {
-      cancelled = true;
-      window.clearInterval(intervalId);
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('focus', handleWindowFocus);
-    };
-  }, [refreshToken, token]);
 
   useEffect(() => {
     document.title = `${branding.appName} | ${activePage}`;

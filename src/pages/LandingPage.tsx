@@ -187,12 +187,12 @@ export default function LandingPage() {
         className="relative pt-28 pb-20 md:pt-36 md:pb-28 text-white overflow-hidden"
         style={{
           background:
-            "linear-gradient(135deg, rgba(0, 71, 139, 0.96) 0%, rgba(0, 93, 172, 0.94) 52%, rgba(10, 107, 195, 0.92) 100%)",
+            "linear-gradient(135deg, rgba(0, 71, 139, 0.96) 0%, rgba(0, 93, 172, 0.94) 56%, rgba(13, 137, 111, 0.9) 100%)",
         }}
       >
         {/* Glow Effects */}
         <div className="absolute top-20 right-[-10%] w-96 h-96 bg-white/5 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute bottom-10 left-[-10%] w-96 h-96 bg-blue-300/5 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute bottom-10 left-[-10%] w-96 h-96 bg-emerald-300/10 rounded-full blur-3xl pointer-events-none" />
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid lg:grid-cols-12 gap-12 items-center">
@@ -200,13 +200,13 @@ export default function LandingPage() {
             <div className="lg:col-span-6 text-center lg:text-left">
               {/* Badge */}
               <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-white/10 text-white border border-white/20 mb-6">
-                <Shield className="w-3.5 h-3.5 text-blue-300" /> Next-Generation
+                <Shield className="w-3.5 h-3.5 text-emerald-200" /> Next-Generation
                 Telematics Underwriting
               </div>
 
               <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-tight text-white leading-[1.15]">
                 Assess vehicle risk with{" "}
-                <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-200 to-white">
+                <span className="bg-clip-text text-transparent bg-gradient-to-r from-emerald-100 to-white">
                   real-time score analytics
                 </span>
               </h1>
@@ -566,12 +566,12 @@ export default function LandingPage() {
         className="py-20 text-white relative overflow-hidden"
         style={{
           background:
-            "linear-gradient(135deg, rgba(0, 71, 139, 0.96) 0%, rgba(0, 93, 172, 0.94) 52%, rgba(10, 107, 195, 0.92) 100%)",
+            "linear-gradient(135deg, rgba(0, 71, 139, 0.96) 0%, rgba(0, 93, 172, 0.94) 56%, rgba(13, 137, 111, 0.9) 100%)",
         }}
       >
         {/* Glow Effects */}
         <div className="absolute top-20 right-[-10%] w-96 h-96 bg-white/5 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute bottom-10 left-[-10%] w-96 h-96 bg-blue-300/5 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute bottom-10 left-[-10%] w-96 h-96 bg-emerald-300/10 rounded-full blur-3xl pointer-events-none" />
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid lg:grid-cols-12 gap-12 items-start">
@@ -639,7 +639,7 @@ export default function LandingPage() {
 
             {/* Contact Form UI - Crisp white high-contrast card */}
             <div className="lg:col-span-7">
-              <div className="bg-white border border-[#003d81]/10 rounded-2xl p-6 sm:p-8 shadow-2xl text-[#10233f]">
+              <div className="bg-white border border-[#0d896f]/15 rounded-2xl p-6 sm:p-8 shadow-2xl text-[#10233f]">
                 <h3 className="text-xl font-bold text-[#10233f] mb-6">
                   Send an Inquiry
                 </h3>
@@ -672,7 +672,7 @@ export default function LandingPage() {
                             setFormData({ ...formData, name: e.target.value })
                           }
                           placeholder="Full Name"
-                          className="w-full text-sm border border-[#003d81]/10 hover:border-[#003d81]/20 focus:border-[#005dac] rounded-xl p-3 bg-[#f7f8fc] focus:bg-white outline-none transition-all"
+                          className="w-full text-sm border border-[#003d81]/10 hover:border-[#0d896f]/30 focus:border-[#0d896f] rounded-xl p-3 bg-[#f7f8fc] focus:bg-white outline-none transition-all"
                         />
                       </div>
                       <div>
@@ -691,7 +691,7 @@ export default function LandingPage() {
                             setFormData({ ...formData, email: e.target.value })
                           }
                           placeholder="email"
-                          className="w-full text-sm border border-[#003d81]/10 hover:border-[#003d81]/20 focus:border-[#005dac] rounded-xl p-3 bg-[#f7f8fc] focus:bg-white outline-none transition-all"
+                          className="w-full text-sm border border-[#003d81]/10 hover:border-[#0d896f]/30 focus:border-[#0d896f] rounded-xl p-3 bg-[#f7f8fc] focus:bg-white outline-none transition-all"
                         />
                       </div>
                     </div>
@@ -712,13 +712,13 @@ export default function LandingPage() {
                           setFormData({ ...formData, message: e.target.value })
                         }
                         placeholder="How can our telematics team support your underwriting operations?"
-                        className="w-full text-sm border border-[#003d81]/10 hover:border-[#003d81]/20 focus:border-[#005dac] rounded-xl p-3 bg-[#f7f8fc] focus:bg-white outline-none resize-none transition-all"
+                        className="w-full text-sm border border-[#003d81]/10 hover:border-[#0d896f]/30 focus:border-[#0d896f] rounded-xl p-3 bg-[#f7f8fc] focus:bg-white outline-none resize-none transition-all"
                       />
                     </div>
 
                     <button
                       type="submit"
-                      className="w-full bg-[#005dac] hover:bg-[#00478b] text-white font-semibold py-3 px-6 rounded-xl shadow-md hover:shadow-lg transition-all duration-200 text-sm"
+                      className="w-full bg-[#0d896f] hover:bg-[#0b705c] text-white font-semibold py-3 px-6 rounded-xl shadow-md hover:shadow-lg transition-all duration-200 text-sm"
                     >
                       Submit Message
                     </button>

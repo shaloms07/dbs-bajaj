@@ -1,8 +1,4 @@
-import { useAuthStore } from '../store/authStore';
-import { ensureValidAccessToken, isSessionExpiredError } from './authService';
-
-const DEFAULT_API_BASE_URL = 'https://citihubkiosk.com/dbs';
-const apiBaseUrl = (import.meta.env.VITE_DBS_API_BASE_URL || DEFAULT_API_BASE_URL).replace(/\/+$/, '');
+import { ApiErrorResponse, apiBaseUrl, clearSessionOnAuthError, fetchWithCookies, getApiErrorMessage, parseJson } from './apiClient';
 
 export interface BatchLookupResult {
   vehicle_number: string;
@@ -20,61 +16,47 @@ export interface BatchLookupResponse {
   risk_category_counts: Record<string, number>;
 }
 
-async function requestBatchLookup(accessToken: string, vehicleNumbers: string[]) {
-  return fetch(`${apiBaseUrl}/dashboard/lookup/batch?include_rc=false`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${accessToken}`
-    },
-    body: JSON.stringify({
-      vehicle_numbers: vehicleNumbers
-    })
-  });
+function normalizeVehicleNumbers(vehicleNumbers: string[]) {
+  const normalized = [...new Set(vehicleNumbers.map((vehicleNumber) => vehicleNumber.trim().toUpperCase()).filter(Boolean))];
+
+  if (normalized.length === 0) {
+    throw new Error('At least one vehicle number is required');
+  }
+
+  return normalized;
+}
+
+function isBatchLookupResponse(value: unknown): value is BatchLookupResponse {
+  const item = value && typeof value === 'object' ? (value as Record<string, unknown>) : null;
+  return Boolean(
+    item &&
+      Array.isArray(item.results) &&
+      typeof item.total_results === 'number' &&
+      item.risk_category_counts &&
+      typeof item.risk_category_counts === 'object'
+  );
 }
 
 export async function submitBatch(vehicleNumbers: string[]): Promise<BatchLookupResponse> {
-  let token = await ensureValidAccessToken();
+  const normalizedVehicleNumbers = normalizeVehicleNumbers(vehicleNumbers);
+  const response = await fetchWithCookies(`${apiBaseUrl}/dashboard/lookup/batch?include_rc=false`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      vehicle_numbers: normalizedVehicleNumbers
+    })
+  });
 
-  let response = await requestBatchLookup(token, vehicleNumbers);
-
-  if (response.status === 401) {
-    try {
-      token = await ensureValidAccessToken(true);
-      response = await requestBatchLookup(token, vehicleNumbers);
-    } catch (error) {
-      if (isSessionExpiredError(error)) {
-        throw new Error('Session expired. Please sign in again.');
-      }
-      throw error instanceof Error ? error : new Error('Unable to refresh session');
-    }
-  }
-
-  const data = (await response.json().catch(() => null)) as
-    | BatchLookupResponse
-    | { detail?: string; message?: string }
-    | null;
+  const data = await parseJson<BatchLookupResponse | ApiErrorResponse>(response);
 
   if (!response.ok) {
-    if (response.status === 401) {
-      useAuthStore.getState().clearAuth();
-    }
-    const message =
-      (data && 'detail' in data && typeof data.detail === 'string' && data.detail) ||
-      (data && 'message' in data && typeof data.message === 'string' && data.message) ||
-      'Batch lookup failed';
-    throw new Error(message);
+    clearSessionOnAuthError(response);
+    throw new Error(getApiErrorMessage(data, 'Batch lookup failed'));
   }
 
-  if (
-    !data ||
-    !('results' in data) ||
-    !Array.isArray(data.results) ||
-    !('total_results' in data) ||
-    typeof data.total_results !== 'number' ||
-    !('risk_category_counts' in data) ||
-    typeof data.risk_category_counts !== 'object'
-  ) {
+  if (!isBatchLookupResponse(data)) {
     throw new Error('Batch lookup response is invalid');
   }
 

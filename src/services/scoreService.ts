@@ -1,9 +1,5 @@
-import { useAuthStore } from '../store/authStore';
-import { ensureValidAccessToken, isSessionExpiredError } from './authService';
 import { ScoreBand, ScoreResult, Violation } from '../types/score';
-
-const DEFAULT_API_BASE_URL = 'https://citihubkiosk.com/dbs';
-const apiBaseUrl = (import.meta.env.VITE_DBS_API_BASE_URL || DEFAULT_API_BASE_URL).replace(/\/+$/, '');
+import { ApiErrorResponse, apiBaseUrl, clearSessionOnAuthError, fetchWithCookies, getApiErrorMessage, parseJson } from './apiClient';
 
 interface LookupViolationResponse {
   challan_details?: string;
@@ -122,41 +118,23 @@ function pickStats(data: LookupResponse): LookupStatsResponse {
 
 export async function fetchScore(regNo: string, includeRc = false): Promise<ScoreResult> {
   const norm = regNo.toUpperCase().replace(/\s+/g, '');
-  let token = await ensureValidAccessToken();
 
-  const requestLookup = async (accessToken: string) =>
-    fetch(`${apiBaseUrl}/dashboard/lookup/${encodeURIComponent(norm)}?include_rc=${includeRc ? 'true' : 'false'}`, {
-      method: 'GET',
-      headers: {
-        Authorization: `Bearer ${accessToken}`
-      }
-    });
-
-  let response = await requestLookup(token);
-
-  if (response.status === 401) {
-    try {
-      token = await ensureValidAccessToken(true);
-      response = await requestLookup(token);
-    } catch (error) {
-      if (isSessionExpiredError(error)) {
-        throw new Error('Session expired. Please sign in again.');
-      }
-      throw error instanceof Error ? error : new Error('Unable to refresh session');
-    }
+  if (!norm) {
+    throw new Error('Vehicle number is required');
   }
 
-  const data = (await response.json().catch(() => null)) as LookupResponse | { detail?: string; message?: string } | null;
+  const response = await fetchWithCookies(
+    `${apiBaseUrl}/dashboard/lookup/${encodeURIComponent(norm)}?include_rc=${includeRc ? 'true' : 'false'}`,
+    {
+      method: 'GET'
+    }
+  );
+
+  const data = await parseJson<LookupResponse | ApiErrorResponse>(response);
 
   if (!response.ok) {
-    if (response.status === 401) {
-      useAuthStore.getState().clearAuth();
-    }
-    const message =
-      (data && 'detail' in data && typeof data.detail === 'string' && data.detail) ||
-      (data && 'message' in data && typeof data.message === 'string' && data.message) ||
-      (response.status === 404 ? 'Vehicle not found' : 'Unable to fetch vehicle lookup');
-    throw new Error(message);
+    clearSessionOnAuthError(response);
+    throw new Error(getApiErrorMessage(data, response.status === 404 ? 'Vehicle not found' : 'Unable to fetch vehicle lookup'));
   }
 
   if (!data) {
