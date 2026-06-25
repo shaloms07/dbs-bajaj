@@ -35,7 +35,7 @@ export default function LandingPage() {
   const [showScrollTop, setShowScrollTop] = useState(false);
 
   useEffect(() => {
-    document.title = "DBS Driver Behavior Score | Home";
+    document.title = "DBscore";
   }, []);
 
   useEffect(() => {
