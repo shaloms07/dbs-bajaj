@@ -15,6 +15,7 @@ export interface ApiKeyItem {
   is_active: boolean;
   created_at: string;
   last_used_at: string | null;
+  expires_at: string | null;
 }
 
 export interface CreateApiKeyResponse extends ApiKeyItem {
@@ -45,7 +46,8 @@ function isApiKeyItem(value: unknown): value is ApiKeyItem {
       typeof item.key_prefix === 'string' &&
       typeof item.is_active === 'boolean' &&
       typeof item.created_at === 'string' &&
-      (typeof item.last_used_at === 'string' || item.last_used_at === null)
+      (typeof item.last_used_at === 'string' || item.last_used_at === null) &&
+      (typeof item.expires_at === 'string' || item.expires_at === null || item.expires_at === undefined)
   );
 }
 
@@ -134,3 +136,25 @@ export async function deleteApiKey(keyId: string): Promise<void> {
     throw new Error(await parseApiError(response, 'Unable to revoke API key'));
   }
 }
+
+export async function rotateApiKey(keyId: string): Promise<CreateApiKeyResponse> {
+  assertKeyId(keyId);
+
+  const response = await apiFetch(`${apiBaseUrl}/auth/api-keys/${encodeURIComponent(keyId)}/rotate`, {
+    method: 'POST'
+  });
+
+  const data = await parseJson<CreateApiKeyResponse | ApiErrorResponse>(response);
+
+  if (!response.ok) {
+    clearSessionOnAuthError(response);
+    throw new Error(getApiErrorMessage(data, 'Unable to rotate API key'));
+  }
+
+  if (!isApiKeyItem(data) || typeof data.raw_key !== 'string') {
+    throw new Error('Rotate API key response is invalid');
+  }
+
+  return data;
+}
+

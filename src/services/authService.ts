@@ -1,5 +1,6 @@
-import { AuthUser } from '../store/authStore';
+import { AuthUser, useAuthStore } from '../store/authStore';
 import { apiBaseUrl, apiFetch, getApiErrorMessage, parseJson } from './apiClient';
+
 
 export interface LoginResponse {
   email?: string;
@@ -69,4 +70,16 @@ export async function login(payload: LoginPayload): Promise<AuthSession> {
   return {
     user: toAuthUser(data, username)
   };
+}
+
+export async function logout(): Promise<void> {
+  try {
+    await apiFetch(`${apiBaseUrl}/auth/logout`, {
+      method: 'POST'
+    });
+  } catch (error) {
+    console.error('Logout error:', error);
+  } finally {
+    useAuthStore.getState().clearAuth();
+  }
 }

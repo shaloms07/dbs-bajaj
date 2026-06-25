@@ -7,7 +7,8 @@ import VehicleLookup from './pages/VehicleLookup';
 import PortfolioAnalytics from './pages/PortfolioAnalytics';
 import BatchProcessing from './pages/BatchProcessing';
 import UsageBilling from './pages/UsageBilling';
-import APIConsole from './pages/APIConsole';
+import APIKeys from './pages/APIKeys';
+import APIDocs from './pages/APIDocs';
 import LandingPage from './pages/LandingPage';
 
 function ProtectedRoute({ children }: { children: ReactElement }) {
@@ -35,11 +36,13 @@ export default function App() {
           <Route path="/portfolio" element={<PortfolioAnalytics />} />
           <Route path="/batch" element={<BatchProcessing />} />
           <Route path="/usage-billing" element={<UsageBilling />} />
-          <Route path="/api" element={<APIConsole />} />
+          <Route path="/api-keys" element={<APIKeys />} />
+          <Route path="/api-docs" element={<APIDocs />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </div>
   );
 }
+
 
