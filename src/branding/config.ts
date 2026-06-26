@@ -1,4 +1,5 @@
 import dbscoreLogo from '../assets/dbscore-wordmark.png';
+import bajajLogo from '../assets/bajaj-logo.svg';
 import { AuthUser } from '../store/authStore';
 
 export type BrandId = 'dbs' | 'bajaj';
@@ -55,8 +56,8 @@ export const BRANDING_CONFIGS: Record<BrandId, BrandingConfig> = {
     underwritingConsoleLabel: 'Bajaj General Insurance underwriting console',
     vehicleLookupReportTitle: 'Bajaj Vehicle Lookup Report',
     filePrefix: 'bajaj',
-    logoSrc: dbscoreLogo,
-    logoAlt: 'dbscore logo',
+    logoSrc: bajajLogo,
+    logoAlt: 'BGIL logo',
     loginHeadline: 'See the risk behind every vehicle. Before you insure it.',
     loginAccessCopy: 'Enter your credentials to access the Bajaj Insurer Dashboard.'
   }
