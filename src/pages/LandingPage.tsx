@@ -1,915 +1,371 @@
-import { useNavigate } from "react-router-dom";
-import { useEffect, useState } from "react";
-import { useAuthStore } from "../store/authStore";
-import dbsLogo from "../assets/dbs-logo.png";
-import bannerImg from "../assets/motor_clp_banner.webp";
-import {
-  ArrowRight,
-  BarChart3,
-  Shield,
-  Zap,
-  Database,
-  CheckCircle2,
-  Mail,
-  Phone,
-  MapPin,
-  Menu,
-  X,
-  TrendingUp,
-  Cpu,
-  Layers,
-} from "lucide-react";
+import { useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuthStore } from '../store/authStore';
+import dbscoreLogo from '../assets/dbscore-wordmark.png';
+
+const stats = [
+  {
+    value: 'Same',
+    label: 'The premium a repeatedly penalised vehicle pays versus a clean-record vehicle under current motor insurance pricing.'
+  },
+  {
+    value: '12',
+    label: 'Offence severity clusters the DBS framework applies, from drunk driving at the highest severity to wrong parking at the lowest.'
+  },
+  {
+    value: '3',
+    label: 'Data source categories DBS aggregates: enforcement records, telematics, and transport ecosystem data into one underwriting score.'
+  }
+];
+
+const platformCards = [
+  ['Beyond proxies', 'Behavioural Evidence Beyond the Vehicle', 'DBS goes beyond conventional underwriting inputs by layering in actual behavioural data specific to that registration number. Additional intelligence, not a replacement for existing underwriting judgment.'],
+  ['Quotation & renewal', 'Actionable at the Point of Decision', 'The DBS output, score, risk band, and recommended premium modifier, is available at quotation or renewal, ready to apply without manual interpretation or additional data retrieval.'],
+  ['Full audit trail', 'Defensible Under Scrutiny', 'Every score is traceable to the underlying data records that generated it. When a policyholder disputes a loading, the underwriter has a documented, data-backed audit trail.']
+];
+
+const phases = [
+  {
+    id: 'Phase 01',
+    name: 'Enforcement Records',
+    status: 'Active',
+    statusClass: 'active',
+    source: 'Traffic Violation Data',
+    body: 'Traffic violation records covering the full spectrum of Motor Vehicles Act offences, from drunk driving and dangerous driving to signal violations and wrong parking. Universally available across all vehicle categories and geographies.'
+  },
+  {
+    id: 'Phase 02',
+    name: 'Telematics Data',
+    status: 'In Development',
+    statusClass: 'dev',
+    source: 'Vehicle Telematics',
+    body: 'Vehicle telematics introduces a continuous behavioural layer: speed behaviour, driving patterns, night driving frequency, response to road and traffic conditions, and trip-level characteristics.'
+  },
+  {
+    id: 'Phase 03',
+    name: 'Transport Ecosystem Data',
+    status: 'Planned',
+    statusClass: 'plan',
+    source: 'Broader Ecosystem Sources',
+    body: 'DBS is designed to incorporate additional data sources from the broader transport and mobility ecosystem as the platform matures, with each source validated for data quality and actuarial relevance.'
+  }
+];
+
+const thzBlocks = [
+  {
+    className: 'thz-critical',
+    tier: 'Critical',
+    desc: 'Highest weight in scoring. Directly linked to serious road casualties.',
+    items: ['Drunk / Drugged Driving', 'Dangerous / Reckless Driving', 'Disobeying Authority / Evading Enforcement']
+  },
+  {
+    className: 'thz-major',
+    tier: 'Major',
+    desc: 'Significant risk behaviours with high accident correlation.',
+    items: ['Overspeeding', 'No Valid Licence / No Valid Insurance', 'Wrong Lane / Wrong Side of Road']
+  },
+  {
+    className: 'thz-moderate',
+    tier: 'Moderate',
+    desc: 'Repeated violations in this tier indicate a pattern of non-compliance.',
+    items: ['Hazardous Goods Transport Violation', 'Traffic Signal Violation', 'Vehicle Overloading']
+  },
+  {
+    className: 'thz-minor',
+    tier: 'Minor',
+    desc: 'Lower individual weight but frequency of these signals risk complacency.',
+    items: ['No Helmet / No Seatbelt / Safety Violations', 'Unauthorised Vehicle Modifications', 'Wrong Parking']
+  }
+];
+
+const underwriterCards = [
+  ['Lookup', 'Individual Vehicle Query', 'Query any vehicle registration number at quotation or renewal. Receive the DBS score, risk band, violation category breakdown, and recommended premium modifier.'],
+  ['Renewal', 'Batch Portfolio Processing', 'Submit a portfolio of registration numbers for bulk scoring at renewal. Receive structured scores, band classifications, and loading recommendations.'],
+  ['Integration', 'REST API', 'A versioned, documented REST API for direct integration into policy management, pricing, or underwriting platforms.'],
+  ['Analytics', 'Portfolio Risk Analytics', 'Analyse risk band concentration by vehicle class, geography, sum insured bracket, or policy vintage.'],
+  ['Compliance', 'Audit-Ready Traceability', 'Every DBS score is traceable to the underlying records that generated it, supporting audit, compliance review, and dispute resolution.'],
+  ['Strategy', 'Adverse Selection Defence', 'Incorporating DBS signals helps attract lower-risk vehicles and reprice higher-risk ones at renewal.']
+];
+
+const workflow = [
+  ['01', 'Query', 'Submit the Vehicle Registration Number', "Enter the registration number via the DBS dashboard or API at quotation or renewal. The system retrieves the vehicle's behavioural data record automatically."],
+  ['02', 'Score', 'DBS Score and Risk Band Returned', 'The scoring engine applies the THZ severity framework and returns the DBS score, risk band, recommended premium modifier, and input category breakdown.'],
+  ['03', 'Decision', 'Apply the Premium Modifier', 'Use the DBS-recommended modifier on the base premium. DBS provides the evidential basis; the underwriter applies it within pricing authority.'],
+  ['04', 'Audit', 'Complete, Traceable Record', 'Every query, score, band, and modifier applied is logged and linked to the underlying data records for review.']
+];
 
 export default function LandingPage() {
   const navigate = useNavigate();
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [formSubmitted, setFormSubmitted] = useState(false);
-  const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    message: "",
-  });
-
-  const [scrollProgress, setScrollProgress] = useState(0);
-  const [showScrollTop, setShowScrollTop] = useState(false);
 
   useEffect(() => {
-    document.title = "DBscore";
-  }, []);
+    document.title = 'Driver Behaviour Score - dbscore.in';
 
-  useEffect(() => {
-    const onScroll = () => {
-      const scrolled = window.scrollY;
-      const total =
-        document.documentElement.scrollHeight -
-        document.documentElement.clientHeight;
-      setScrollProgress(total > 0 ? (scrolled / total) * 100 : 0);
-      setShowScrollTop(scrolled > 300);
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('in');
+            observer.unobserve(entry.target);
+          }
+        });
+      },
+      { threshold: 0.1 }
+    );
+    document.querySelectorAll('.dbs-landing .reveal').forEach((el) => observer.observe(el));
+
+    return () => {
+      observer.disconnect();
     };
-    window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
-  const handleContactSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (formData.name && formData.email && formData.message) {
-      setFormSubmitted(true);
-      setTimeout(() => {
-        setFormSubmitted(false);
-        setFormData({ name: "", email: "", message: "" });
-      }, 5000);
-    }
-  };
-
-  const navLinks = [
-    { name: "Home", href: "#" },
-    { name: "About", href: "#about" },
-    { name: "What We Do", href: "#what-we-do" },
-    { name: "How It Works", href: "#how-it-works" },
-    { name: "Contact", href: "#contact" },
-  ];
+  const goToApp = () => navigate(isAuthenticated ? '/lookup' : '/login');
 
   return (
-    <>
-    <div className="min-h-screen bg-[#f7f8fc] text-[#10233f] font-sans selection:bg-[#005dac]/20">
-      {/* Navigation Bar */}
-      <nav className="bg-white/80 backdrop-blur-md fixed top-0 w-full z-50 border-b border-[#003d81]/10 transition-all duration-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div
-              className="flex items-center space-x-3 cursor-pointer"
-              onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-            >
-              <img
-                src={dbsLogo}
-                alt="DBS Logo"
-                className="h-16 w-auto object-contain"
-              />
-              <span className="text-lg font-bold tracking-tight text-[#092C54] ">
-                  Driver{" "}
-                  <span className="text-[#092C54] font-semibold">
-                    Behavior Score
-                  </span>
-                </span>
-            </div>
-
-            {/* Desktop Navigation */}
-            <div className="hidden md:flex space-x-8">
-              {navLinks.map((link) => (
-                <a
-                  key={link.name}
-                  href={link.href}
-                  className="text-sm font-lg font-bold text-[#4d627e] hover:text-[#005dac] transition-colors"
-                >
-                  {link.name}
-                </a>
-              ))}
-            </div>
-
-            <div className="hidden md:flex items-center">
-              {isAuthenticated ? (
-                <button
-                  onClick={() => navigate("/lookup")}
-                  className="bg-[#005dac] hover:bg-[#00478b] text-white font-semibold py-2 px-5 rounded-xl shadow-md hover:shadow-lg transition-all duration-200 text-sm flex items-center gap-1.5"
-                >
-                  Go to Dashboard <ArrowRight className="w-4 h-4" />
-                </button>
-              ) : (
-                <button
-                  onClick={() => navigate("/login")}
-                  className="bg-[#005dac] hover:bg-[#00478b] text-white font-semibold py-2 px-5 rounded-xl shadow-md hover:shadow-lg transition-all duration-200 text-sm"
-                >
-                  Login
-                </button>
-              )}
-            </div>
-
-            {/* Mobile menu button */}
-            <div className="md:hidden flex items-center">
-              <button
-                onClick={() => setIsMenuOpen(!isMenuOpen)}
-                className="text-[#4d627e] hover:text-[#10233f] focus:outline-none"
-                aria-label="Toggle Navigation Menu"
-              >
-                {isMenuOpen ? (
-                  <X className="h-6 w-6" />
-                ) : (
-                  <Menu className="h-6 w-6" />
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Mobile menu, show/hide based on menu state. */}
-        {isMenuOpen && (
-          <div className="md:hidden bg-white border-b border-[#003d81]/10 px-4 pt-2 pb-4 space-y-2">
-            {navLinks.map((link) => (
-              <a
-                key={link.name}
-                href={link.href}
-                onClick={() => setIsMenuOpen(false)}
-                className="block text-base font-medium text-[#4d627e] hover:text-[#005dac] hover:bg-[#f4f7ff] px-3 py-2 rounded-lg transition-all"
-              >
-                {link.name}
-              </a>
-            ))}
-            <div className="pt-2 border-t border-[#003d81]/10">
-              {isAuthenticated ? (
-                <button
-                  onClick={() => {
-                    setIsMenuOpen(false);
-                    navigate("/lookup");
-                  }}
-                  className="w-full bg-[#005dac] hover:bg-[#00478b] text-white font-semibold py-2 px-4 rounded-xl shadow-sm text-sm text-center flex items-center justify-center gap-1.5"
-                >
-                  Go to Dashboard <ArrowRight className="w-4 h-4" />
-                </button>
-              ) : (
-                <button
-                  onClick={() => {
-                    setIsMenuOpen(false);
-                    navigate("/login");
-                  }}
-                  className="w-full bg-[#005dac] hover:bg-[#00478b] text-white font-semibold py-2 px-4 rounded-xl shadow-sm text-sm text-center"
-                >
-                  Login
-                </button>
-              )}
-            </div>
-          </div>
-        )}
+    <div className="dbs-landing" id="top">
+      <nav className="dbs-nav">
+        <a className="nav-logo" href="#top" aria-label="dbscore home">
+          <img src={dbscoreLogo} alt="dbscore" />
+        </a>
+        <ul className="nav-links">
+          <li><a href="#platform">Platform</a></li>
+          <li><a href="#data">Data Sources</a></li>
+          <li><a href="#framework">Framework</a></li>
+          <li><a href="#underwriters">For Underwriters</a></li>
+          <li><button type="button" className="nav-cta" onClick={goToApp}>{isAuthenticated ? 'Dashboard' : 'Insurer Login'}</button></li>
+        </ul>
       </nav>
 
-      {/* Hero Section with Custom Deep Blue Gradient */}
-      <section
-        className="relative pt-28 pb-20 md:pt-36 md:pb-28 text-white overflow-hidden"
-        style={{
-          background:
-            "linear-gradient(135deg, rgba(0, 71, 139, 0.96) 0%, rgba(0, 93, 172, 0.94) 56%, rgba(13, 137, 111, 0.9) 100%)",
-        }}
-      >
-        {/* Glow Effects */}
-        <div className="absolute top-20 right-[-10%] w-96 h-96 bg-white/5 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute bottom-10 left-[-10%] w-96 h-96 bg-emerald-300/10 rounded-full blur-3xl pointer-events-none" />
-
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid lg:grid-cols-12 gap-12 items-center">
-            {/* Left Column (Text copy) */}
-            <div className="lg:col-span-6 text-center lg:text-left">
-              {/* Badge */}
-              <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-white/10 text-white border border-white/20 mb-6">
-                <Shield className="w-3.5 h-3.5 text-emerald-200" /> Next-Generation
-                Telematics Underwriting
-              </div>
-
-              <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-tight text-white leading-[1.15]">
-                Assess vehicle risk with{" "}
-                <span className="bg-clip-text text-transparent bg-gradient-to-r from-emerald-100 to-white">
-                  real-time score analytics
-                </span>
-              </h1>
-              <p className="mt-6 text-base sm:text-lg md:text-xl text-blue-100 max-w-xl mx-auto lg:mx-0 leading-relaxed">
-                Empower your underwriting workforce. Leverage robust driving
-                telematics, risk band mapping, and violation tracking in a
-                centralized dashboard.
-              </p>
-
-              <div className="mt-8 flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4">
-                {isAuthenticated ? (
-                  <button
-                    onClick={() => navigate("/lookup")}
-                    className="w-full sm:w-auto bg-white hover:bg-slate-100 text-[#005dac] font-bold py-3.5 px-8 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center gap-2 hover:-translate-y-0.5 animate-bounce-subtle"
-                  >
-                    Go to Dashboard{" "}
-                    <ArrowRight className="w-5 h-5 text-[#005dac]" />
-                  </button>
-                ) : (
-                  <button
-                    onClick={() => navigate("/login")}
-                    className="w-full sm:w-auto bg-white hover:bg-slate-100 text-[#005dac] font-bold py-3.5 px-8 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center gap-2 hover:-translate-y-0.5"
-                  >
-                    Get Started{" "}
-                    <ArrowRight className="w-5 h-5 text-[#005dac]" />
-                  </button>
-                )}
-                <a
-                  href="#about"
-                  className="w-full sm:w-auto text-center border border-white/30 bg-white/5 hover:bg-white/15 text-white font-semibold py-3.5 px-8 rounded-xl shadow-sm transition-all duration-200"
-                >
-                  Learn More
-                </a>
-              </div>
+      <section className="hero">
+        <div className="hero-inner">
+          <div className="hero-eyebrow">Motor Risk Intelligence · dbscore.in</div>
+          <h1>See the risk behind<br />every vehicle.<br /><em>Before you insure it.</em></h1>
+          <p className="hero-desc">The Driver Behaviour Score aggregates a vehicle&apos;s behavioural data trail across enforcement records and telematics sources into a single, standardised underwriting score.</p>
+          <div className="score-gauge-wrap" aria-label="Example DBS score 300, exemplary risk band">
+            <div className="score-gauge-meta">
+              <span>Risk Gauge</span>
+              <span>Vehicle - MH-31-AB-XXXX</span>
             </div>
-
-            {/* Right Column (Visual asset and Score panel below) */}
-            <div className="lg:col-span-6 flex justify-center">
-              <div className="relative w-full max-w-[480px] lg:max-w-none">
-                {/* Visual Frame - Image is bigger */}
-                <div className="relative rounded-2xl border border-white/20 bg-white/5 shadow-2xl p-3 backdrop-blur-sm overflow-hidden mb-6">
-                  <img
-                    src={bannerImg}
-                    alt="Driver Analytics Banner"
-                    className="rounded-xl w-full h-auto object-cover max-h-[460px] shadow-sm bg-white/5 transition-transform duration-500 hover:scale-102"
-                  />
-                </div>
-                {/* Score panel placed neatly below the image */}
-                <div className="bg-white/10 backdrop-blur-md border border-white/15 rounded-2xl p-5 shadow-xl flex items-center justify-between text-white transition-all hover:bg-white/15">
-                  <div>
-                    <span className="text-xs text-blue-200 block font-medium uppercase tracking-wider">
-                      Driver Behaviour Score
-                    </span>
-                    <span className="text-2xl font-bold text-white">
-                      264{" "}
-                      <span className="text-sm font-normal text-blue-200">
-                        / 300
-                      </span>
-                    </span>
-                  </div>
-                  <div className="px-3 py-1.5 text-xs font-bold bg-[#d8f3ea] text-[#0b8666] rounded-full shadow-sm">
-                    EXEMPLARY
-                  </div>
-                </div>
-              </div>
+            <svg className="score-gauge-svg" viewBox="0 0 264 176" role="img" aria-labelledby="gauge-title gauge-desc">
+              <title id="gauge-title">DBS score gauge</title>
+              <desc id="gauge-desc">A semicircle gauge with high risk, moderate, safe, and exemplary bands. The score reads 300, exemplary.</desc>
+              <path className="gauge-track" d="M32 148 A100 100 0 0 1 232 148" pathLength="100" />
+              <path className="gauge-band gauge-band-high" d="M32 148 A100 100 0 0 1 232 148" pathLength="100" />
+              <path className="gauge-band gauge-band-moderate" d="M32 148 A100 100 0 0 1 232 148" pathLength="100" />
+              <path className="gauge-band gauge-band-safe" d="M32 148 A100 100 0 0 1 232 148" pathLength="100" />
+              <path className="gauge-band gauge-band-exemplary" d="M32 148 A100 100 0 0 1 232 148" pathLength="100" />
+            </svg>
+            <div className="score-gauge-reading">
+              <strong>264</strong>
+              <span>Exemplary</span>
             </div>
+            <div className="score-gauge-bands">
+              <span className="b-high">High Risk</span>
+              <span className="b-mod">Moderate</span>
+              <span className="b-safe">Safe</span>
+              <span className="b-exem">Exemplary</span>
+            </div>
+            <div className="score-gauge-note">Illustrative position only. No personal data displayed.</div>
+          </div>
+          <div className="hero-actions">
+            <button type="button" className="btn-primary" onClick={goToApp}>{isAuthenticated ? 'Open Dashboard' : 'Request Insurer Access'} →</button>
+            <a href="#platform" className="btn-secondary">How It Works</a>
           </div>
         </div>
       </section>
 
-      {/* About Section */}
-      <section
-        id="about"
-        className="py-20 bg-white border-t border-[#003d81]/10"
-      >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center max-w-3xl mx-auto mb-16">
-            <h2 className="text-xs font-bold uppercase tracking-wider text-[#005dac]">
-              Platform Overview
-            </h2>
-            <p className="mt-3 text-3xl font-extrabold text-[#10233f] sm:text-4xl">
-              Understand vehicle risk metrics in seconds
-            </p>
-            <p className="mt-4 text-base sm:text-lg text-[#4d627e]">
-              Our telematics pipeline translates raw driving behavioral data
-              into a clear scoring standard, allowing underwriters to
-              confidently quote premiums, inspect violation timelines, and
-              manage risk portfolios.
-            </p>
+      <section className="s-base" id="problem">
+        <div className="s-inner">
+          <div className="eyebrow">The Underwriting Gap</div>
+          <h2 className="section-hed">Motor insurance has always priced the vehicle.<br /><em>Never the behaviour behind it.</em></h2>
+          <div className="pull-quote">
+            <p>A vehicle with repeated overspeeding records, signal violations, and a reckless driving history carries the same premium as one with an unblemished record.</p>
           </div>
+          <p className="section-lead">The data to distinguish them has always existed: <strong>distributed across enforcement systems, telematics infrastructure, and the transport ecosystem.</strong> It was fragmented not because it was unavailable, but because no platform had assembled it into a form that underwriting teams could act on. DBS changes that.</p>
+          <hr className="section-divider" />
+          <div className="three-col">
+            {stats.map((stat) => (
+              <div className="card stat-card reveal" key={stat.value}>
+                <div className="stat-num">{stat.value}</div>
+                <div >{stat.label}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
 
-          <div className="grid md:grid-cols-2 gap-12 items-center">
-            <div className="space-y-6">
-              <h3 className="text-2xl font-bold text-[#10233f]">
-                Underwrite policies backed by telemetry
-              </h3>
-              <p className="text-[#4d627e] leading-relaxed">
-                Evaluating physical vehicles is only part of the risk equation.
-                DBS Driver Behavior Score equips insurance adjusters with
-                granular insights into acceleration behavior, deceleration
-                events, speed excess, and fatigue signals.
-              </p>
+      <section className="s-white" id="platform">
+        <div className="s-inner">
+          <div className="eyebrow">The Platform</div>
+          <h2 className="section-hed">The data was always there.<br /><em>Fragmented across systems.</em><br />DBS brings it together.</h2>
+          <p className="section-lead">Every vehicle in India generates a continuous trail of behavioural data. Enforcement records. Telematics signals. Transport ecosystem data. This information exists: recorded, timestamped, distributed across multiple systems that have never spoken to each other.</p>
+          <p className="section-lead">DBS is the aggregation layer. It retrieves this data, applies a structured severity framework, and compresses it into a single scored output with a risk band and a recommended premium modifier.</p>
+          <hr className="section-divider" />
+          <div className="three-col">
+            {platformCards.map(([label, title, body]) => (
+              <div className="card reveal" key={title}>
+                <div className="card-label">{label}</div>
+                <div className="card-title">{title}</div>
+                <div className="card-body">{body}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
 
-              <ul className="space-y-4">
-                <li className="flex items-start gap-3">
-                  <div className="mt-1 p-1 bg-[#d8f3ea] text-[#0b8666] rounded-full">
-                    <CheckCircle2 className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <strong className="text-[#10233f] font-medium block">
-                      Auditable telematics analysis window
-                    </strong>
-                    <span className="text-sm text-[#4d627e]">
-                      Access standard historical data timelines for transparent
-                      calculation metrics.
-                    </span>
-                  </div>
-                </li>
-                <li className="flex items-start gap-3">
-                  <div className="mt-1 p-1 bg-[#d8f3ea] text-[#0b8666] rounded-full">
-                    <CheckCircle2 className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <strong className="text-[#10233f] font-medium block">
-                      Direct Risk Classification
-                    </strong>
-                    <span className="text-sm text-[#4d627e]">
-                      Categorize drivers dynamically between Exemplary, Safe,
-                      Moderate, and Extreme Risk bands.
-                    </span>
-                  </div>
-                </li>
-                <li className="flex items-start gap-3">
-                  <div className="mt-1 p-1 bg-[#d8f3ea] text-[#0b8666] rounded-full">
-                    <CheckCircle2 className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <strong className="text-[#10233f] font-medium block">
-                      Recommended Loading & Discount percentages
-                    </strong>
-                    <span className="text-sm text-[#4d627e]">
-                      Apply dynamic pricing logic directly correlated to
-                      behavioral driving analytics.
-                    </span>
-                  </div>
-                </li>
-              </ul>
-            </div>
-
-            <div className="bg-[#f4f7ff] rounded-2xl p-8 border border-[#003d81]/10 shadow-inner flex flex-col justify-between">
-              <div className="flex items-center gap-4 mb-6">
-                <div className="p-3 bg-[#005dac] text-white rounded-xl shadow-md">
-                  <TrendingUp className="w-6 h-6" />
+      <section className="s-alt" id="data">
+        <div className="s-inner">
+          <div className="eyebrow">Data Architecture</div>
+          <h2 className="section-hed">A multi-source scoring engine.<br /><em>Built to grow with the ecosystem.</em></h2>
+          <p className="section-lead">DBS is architected to aggregate behavioural signals from multiple data sources across phases. The scoring framework is source-agnostic, so as each source is validated and integrated, the score becomes progressively richer without requiring changes to the underwriter&apos;s workflow.</p>
+          <div className="phase-list">
+            {phases.map((phase) => (
+              <div className="phase-row reveal" key={phase.id}>
+                <div>
+                  <div className="phase-id">{phase.id}</div>
+                  <div className="phase-name">{phase.name}</div>
+                  <div className={`phase-pill ${phase.statusClass}`}>{phase.status}</div>
                 </div>
                 <div>
-                  <h4 className="text-lg font-bold text-[#10233f]">
-                    Risk Predictive Analytics
-                  </h4>
-                  <span className="text-xs text-[#4d627e]">
-                    Proprietary Telemetry Intelligence
-                  </span>
+                  <div className="phase-source">{phase.source}</div>
+                  <p className="phase-body">{phase.body}</p>
                 </div>
               </div>
+            ))}
+          </div>
+        </div>
+      </section>
 
-              <p className="text-[#4d627e] text-sm leading-relaxed mb-6">
-                By aggregating telematics variables over historical periods, we
-                model driving behavior profiles that anticipate future accident
-                probabilities, leading to lower loss ratios and optimized
-                premium rates.
-              </p>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="bg-white p-4 rounded-xl border border-[#003d81]/10">
-                  <span className="text-2xl font-bold text-[#005dac]">300</span>
-                  <span className="text-xs text-[#8493a8] block mt-1">
-                    Scale Max Range
-                  </span>
+      <section className="s-white" id="framework">
+        <div className="s-inner">
+          <div className="eyebrow">Scoring Methodology</div>
+          <h2 className="section-hed">A structured severity framework.<br /><em>Consistent, weighted, auditable.</em></h2>
+          <p className="section-lead">DBS applies a <strong>Threat Hazard Zone (THZ) classification</strong> to behavioural inputs. Each signal is mapped to one of twelve offence clusters ranked by the severity of road safety risk that behaviour represents.</p>
+          <div className="thz-note-card reveal">
+            <div className="thz-note-label">For Authorised Insurers</div>
+            <p>The THZ offence categories are listed below. Scoring weights, assessment parameters, multiplier schedules, and band thresholds are available to authorised insurers upon platform access.</p>
+          </div>
+          <div className="thz-four-col">
+            {thzBlocks.map((block, blockIndex) => (
+              <div className={`thz-block ${block.className}`} key={block.tier}>
+                <div className="thz-block-header">
+                  <span className="thz-block-dot" />
+                  <span className="thz-block-tier">{block.tier}</span>
                 </div>
-                <div className="bg-white p-4 rounded-xl border border-[#003d81]/10">
-                  <span className="text-2xl font-bold text-[#0b8666]">
-                    &lt; 15%
-                  </span>
-                  <span className="text-xs text-[#8493a8] block mt-1">
-                    Loss Ratio Savings
-                  </span>
+                <div className="thz-block-desc">{block.desc}</div>
+                <ul className="thz-block-list">
+                  {block.items.map((item, itemIndex) => (
+                    <li key={item}><span className="thz-block-code">THZ·{String(blockIndex * 3 + itemIndex + 1).padStart(2, '0')}</span>{item}</li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="s-base" id="underwriters">
+        <div className="s-inner">
+          <div className="eyebrow">For Underwriters</div>
+          <h2 className="section-hed">Everything your underwriting team needs.<br /><em>Nothing it doesn&apos;t.</em></h2>
+          <p className="section-lead">DBS is designed to fit into an insurer&apos;s existing motor underwriting workflow: at quotation, at renewal, and at the portfolio level.</p>
+          <hr className="section-divider" />
+          <div className="three-col">
+            {underwriterCards.map(([label, title, body]) => (
+              <div className="card reveal" key={title}>
+                <div className="card-label">{label}</div>
+                <div className="card-title">{title}</div>
+                <div className="card-body">{body}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="s-white" id="workflow">
+        <div className="s-inner">
+          <div className="eyebrow">Underwriter Workflow</div>
+          <h2 className="section-hed">From registration number<br />to pricing decision. <em>Four steps.</em></h2>
+          <p className="section-lead">A single input, the vehicle registration number, triggers the full DBS scoring pipeline and returns an actionable output ready for the underwriter to apply.</p>
+          <div className="workflow">
+            {workflow.map(([number, label, title, body]) => (
+              <div className="wf-step reveal" key={number}>
+                <div className="wf-n">{number}</div>
+                <div>
+                  <div className="wf-label">{label}</div>
+                  <div className="wf-title">{title}</div>
+                  <div className="wf-body">{body}</div>
                 </div>
               </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="s-blue" id="access">
+        <div className="s-inner">
+          <div className="access-grid">
+            <div>
+              <div className="eyebrow on-blue">Insurer Access</div>
+              <h2 className="section-hed on-blue">Ready to bring evidence into<br /><em>motor risk pricing?</em></h2>
+              <div className="access-prose">
+                <p>DBS is available to insurance underwriters under a formal Data Access Agreement. Access includes the underwriter dashboard, batch processing, REST API credentials, full technical documentation, and dedicated onboarding.</p>
+                <p>Contact us to discuss access for your team, API integration, or pilot participation. We respond to all enquiries within two working days.</p>
+              </div>
+            </div>
+            <div className="access-card reveal">
+              <div className="access-card-title">Get in Touch</div>
+              <div className="contact-row">
+                <div className="contact-lbl">Email</div>
+                <a className="contact-val" href="mailto:contact@social-impact.in">contact@social-impact.in</a>
+              </div>
+              <div className="contact-row">
+                <div className="contact-lbl">Phone</div>
+                <a className="contact-val" href="tel:+919823276203">+91-98232-76203</a>
+              </div>
+              <div className="contact-row">
+                <div className="contact-lbl">Location</div>
+                <span className="contact-val">Nagpur, Maharashtra, India</span>
+              </div>
+              <button type="button" className="btn-access" onClick={goToApp}>{isAuthenticated ? 'Open Dashboard' : 'Request Insurer Access'} →</button>
             </div>
           </div>
         </div>
       </section>
 
-      {/* What We Do Section */}
-      <section
-        id="what-we-do"
-        className="py-20 bg-[#f4f7ff] border-t border-b border-[#003d81]/10"
-      >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center max-w-3xl mx-auto mb-16">
-            <h2 className="text-xs font-bold uppercase tracking-wider text-[#005dac]">
-              Key Capabilities
-            </h2>
-            <p className="mt-3 text-3xl font-extrabold text-[#10233f] sm:text-4xl">
-              Innovative tools built for insurance teams
-            </p>
-            <p className="mt-4 text-base sm:text-lg text-[#4d627e]">
-              A complete telemetry toolset to assess vehicle safety scores,
-              bulk-upload registries, and review API telemetry logs.
-            </p>
+      <footer className="dbs-footer">
+        <div className="footer-grid">
+          <div>
+            <div className="footer-brand">Driver Behaviour Score</div>
+            <div className="footer-tagline">A standardised behavioural risk score for motor insurance underwriting. Built on the data trail every vehicle leaves behind.</div>
+            <div className="footer-entity">Operated by Social-Impact Innovations Pvt. Ltd., Nagpur, Maharashtra, India.</div>
           </div>
-
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
-            {/* Feature 1 */}
-            <div className="bg-white border border-[#003d81]/10 rounded-2xl p-6 shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
-              <div className="p-3 bg-[#e7efff] text-[#005dac] rounded-xl w-fit mb-5">
-                <Database className="w-6 h-6" />
-              </div>
-              <h3 className="text-lg font-bold text-[#10233f] mb-2">
-                Instant Lookup
-              </h3>
-              <p className="text-sm text-[#4d627e] leading-relaxed">
-                Query individual vehicle registrations to pull driving scores,
-                historical violation records, and premium recommendation
-                modifiers.
-              </p>
-            </div>
-
-            {/* Feature 2 */}
-            <div className="bg-white border border-[#003d81]/10 rounded-2xl p-6 shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
-              <div className="p-3 bg-[#e7efff] text-[#005dac] rounded-xl w-fit mb-5">
-                <BarChart3 className="w-6 h-6" />
-              </div>
-              <h3 className="text-lg font-bold text-[#10233f] mb-2">
-                Portfolio Analytics
-              </h3>
-              <p className="text-sm text-[#4d627e] leading-relaxed">
-                Review distribution percentages across behavior bands, track
-                average risk severity, and monitor underwriting trends at scale.
-              </p>
-            </div>
-
-            {/* Feature 3 */}
-            <div className="bg-white border border-[#003d81]/10 rounded-2xl p-6 shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
-              <div className="p-3 bg-[#e7efff] text-[#005dac] rounded-xl w-fit mb-5">
-                <Layers className="w-6 h-6" />
-              </div>
-              <h3 className="text-lg font-bold text-[#10233f] mb-2">
-                Batch Processing
-              </h3>
-              <p className="text-sm text-[#4d627e] leading-relaxed">
-                Upload lists of vehicle license numbers to process safety score
-                analysis, exportable CSV reports, and pricing loadings.
-              </p>
-            </div>
-
-            {/* Feature 4 */}
-            <div className="bg-white border border-[#003d81]/10 rounded-2xl p-6 shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
-              <div className="p-3 bg-[#e7efff] text-[#005dac] rounded-xl w-fit mb-5">
-                <Cpu className="w-6 h-6" />
-              </div>
-              <h3 className="text-lg font-bold text-[#10233f] mb-2">
-                Developer Console
-              </h3>
-              <p className="text-sm text-[#4d627e] leading-relaxed">
-                Seamless REST API integration, complete telemetry payload
-                schemas, test sandboxes, and authentication token logs.
-              </p>
-            </div>
+          <div>
+            <div className="footer-col-title">Navigate</div>
+            <ul className="footer-links">
+              <li><a href="#platform">Platform</a></li>
+              <li><a href="#data">Data Sources</a></li>
+              <li><a href="#framework">THZ Framework</a></li>
+              <li><a href="#underwriters">For Underwriters</a></li>
+              <li><a href="#workflow">Workflow</a></li>
+            </ul>
+          </div>
+          <div>
+            <div className="footer-col-title">Legal</div>
+            <ul className="footer-links">
+              <li><a href="#">Privacy Policy</a></li>
+              <li><a href="#">Terms of Service</a></li>
+              <li><a href="#">DPDP Compliance</a></li>
+              <li><a href="#">Data Source Notice</a></li>
+            </ul>
           </div>
         </div>
-      </section>
-
-      {/* How It Works Section */}
-      <section id="how-it-works" className="py-20 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center max-w-3xl mx-auto mb-16">
-            <h2 className="text-xs font-bold uppercase tracking-wider text-[#005dac]">
-              Our Process
-            </h2>
-            <p className="mt-3 text-3xl font-extrabold text-[#10233f] sm:text-4xl">
-              From telemetry logging to dynamic policy loading
-            </p>
-            <p className="mt-4 text-base sm:text-lg text-[#4d627e]">
-              A streamlined, automated telemetry path designed to help
-              underwriting teams secure business with confident decisioning.
-            </p>
-          </div>
-
-          <div className="relative">
-            {/* Step connecting line for desktop */}
-            <div className="hidden lg:block absolute top-[55px] left-[10%] right-[10%] h-[2px] bg-gradient-to-r from-blue-100 via-[#005dac]/20 to-blue-100 z-0" />
-
-            <div className="grid lg:grid-cols-4 gap-8 relative z-10">
-              {/* Step 1 */}
-              <div className="text-center">
-                <div className="relative flex items-center justify-center w-14 h-14 bg-white border-2 border-[#005dac]/20 text-[#005dac] rounded-full mx-auto font-bold text-xl shadow-md">
-                  1
-                </div>
-                <h3 className="mt-5 font-bold text-lg text-[#10233f]">
-                  Log Telematics
-                </h3>
-                <p className="mt-2 text-sm text-[#4d627e] max-w-xs mx-auto">
-                  Mobile SDKs or vehicle OBD hardware trace speed variance,
-                  acceleration rates, and hard braking patterns.
-                </p>
-              </div>
-
-              {/* Step 2 */}
-              <div className="text-center">
-                <div className="relative flex items-center justify-center w-14 h-14 bg-[#005dac] text-white rounded-full mx-auto font-bold text-xl shadow-md">
-                  2
-                </div>
-                <h3 className="mt-5 font-bold text-lg text-[#10233f]">
-                  Analyze Violations
-                </h3>
-                <p className="mt-2 text-sm text-[#4d627e] max-w-xs mx-auto">
-                  The scoring processor filters noise, matches telemetry events
-                  against threshold parameters, and logs severity metrics.
-                </p>
-              </div>
-
-              {/* Step 3 */}
-              <div className="text-center">
-                <div className="relative flex items-center justify-center w-14 h-14 bg-white border-2 border-[#005dac]/20 text-[#005dac] rounded-full mx-auto font-bold text-xl shadow-md">
-                  3
-                </div>
-                <h3 className="mt-5 font-bold text-lg text-[#10233f]">
-                  Generate Driver Score
-                </h3>
-                <p className="mt-2 text-sm text-[#4d627e] max-w-xs mx-auto">
-                  A standardized 0–300 DBS Driver Score is mapped, outlining
-                  risk bands and dynamic premium modifications.
-                </p>
-              </div>
-
-              {/* Step 4 */}
-              <div className="text-center">
-                <div className="relative flex items-center justify-center w-14 h-14 bg-[#005dac] text-white rounded-full mx-auto font-bold text-xl shadow-md">
-                  4
-                </div>
-                <h3 className="mt-5 font-bold text-lg text-[#10233f]">
-                  Underwrite Policies
-                </h3>
-                <p className="mt-2 text-sm text-[#4d627e] max-w-xs mx-auto">
-                  Log into the console to inspect reporting metrics, download
-                  printable PDF audits, and apply premium loadings.
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Contact Section with Custom Deep Blue Gradient */}
-      <section
-        id="contact"
-        className="py-20 text-white relative overflow-hidden"
-        style={{
-          background:
-            "linear-gradient(135deg, rgba(0, 71, 139, 0.96) 0%, rgba(0, 93, 172, 0.94) 56%, rgba(13, 137, 111, 0.9) 100%)",
-        }}
-      >
-        {/* Glow Effects */}
-        <div className="absolute top-20 right-[-10%] w-96 h-96 bg-white/5 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute bottom-10 left-[-10%] w-96 h-96 bg-emerald-300/10 rounded-full blur-3xl pointer-events-none" />
-
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid lg:grid-cols-12 gap-12 items-start">
-            {/* Contact Details */}
-            <div className="lg:col-span-5 space-y-8">
-              <div>
-                <h2 className="text-xs font-bold uppercase tracking-wider text-blue-200">
-                  Contact Support
-                </h2>
-                <p className="mt-3 text-3xl font-extrabold text-white">
-                  Get in touch with telemetry specialists
-                </p>
-                <p className="mt-4 text-blue-100 leading-relaxed">
-                  Have questions about API setups, batch limits, or telematics
-                  score indices? Send our developers and product specialists a
-                  message.
-                </p>
-              </div>
-
-              <div className="space-y-4">
-                <div className="flex items-center gap-4">
-                  <div className="p-3 bg-white/10 border border-white/20 rounded-xl text-white shadow-sm">
-                    <Mail className="w-5 h-5 text-blue-300" />
-                  </div>
-                  <div>
-                    <span className="text-xs text-blue-200 block font-medium">
-                      Email Support
-                    </span>
-                    <a
-                      href="mailto:support@dbs-driver.com"
-                      className="text-sm font-semibold text-white hover:text-blue-200 transition-colors"
-                    >
-                      contact@social-impact.in
-                    </a>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-4">
-                  <div className="p-3 bg-white/10 border border-white/20 rounded-xl text-white shadow-sm">
-                    <Phone className="w-5 h-5 text-blue-300" />
-                  </div>
-                  <div>
-                    <span className="text-xs text-blue-200 block font-medium">
-                      Phone Support
-                    </span>
-                    <span className="text-sm font-semibold text-white font-medium">
-                      +91-98232 76203
-                    </span>
-                  </div>
-                </div>
-
-                {/* <div className="flex items-center gap-4">
-                  <div className="p-3 bg-white/10 border border-white/20 rounded-xl text-white shadow-sm">
-                    <MapPin className="w-5 h-5 text-blue-300" />
-                  </div>
-                  <div>
-                    <span className="text-xs text-blue-200 block font-medium">HQ Office</span>
-                    <span className="text-sm font-semibold text-white font-medium">
-                      123 Tech Blvd, San Francisco, CA 94107
-                    </span>
-                  </div>
-                </div> */}
-              </div>
-            </div>
-
-            {/* Contact Form UI - Crisp white high-contrast card */}
-            <div className="lg:col-span-7">
-              <div className="bg-white border border-[#0d896f]/15 rounded-2xl p-6 sm:p-8 shadow-2xl text-[#10233f]">
-                <h3 className="text-xl font-bold text-[#10233f] mb-6">
-                  Send an Inquiry
-                </h3>
-
-                {formSubmitted ? (
-                  <div className="bg-[#d8f3ea] border border-[#0b8666]/20 text-[#0b8666] rounded-xl p-4 text-center">
-                    <CheckCircle2 className="w-8 h-8 mx-auto mb-2" />
-                    <p className="font-bold">Inquiry Sent Successfully!</p>
-                    <p className="text-sm mt-1 text-[#0b8666]/90">
-                      Our telematics support agents will respond to you within
-                      one business day.
-                    </p>
-                  </div>
-                ) : (
-                  <form onSubmit={handleContactSubmit} className="space-y-4">
-                    <div className="grid sm:grid-cols-2 gap-4">
-                      <div>
-                        <label
-                          htmlFor="form-name"
-                          className="block text-xs font-semibold text-[#4d627e] uppercase mb-1.5"
-                        >
-                          Your Name
-                        </label>
-                        <input
-                          id="form-name"
-                          type="text"
-                          required
-                          value={formData.name}
-                          onChange={(e) =>
-                            setFormData({ ...formData, name: e.target.value })
-                          }
-                          placeholder="Full Name"
-                          className="w-full text-sm border border-[#003d81]/10 hover:border-[#0d896f]/30 focus:border-[#0d896f] rounded-xl p-3 bg-[#f7f8fc] focus:bg-white outline-none transition-all"
-                        />
-                      </div>
-                      <div>
-                        <label
-                          htmlFor="form-email"
-                          className="block text-xs font-semibold text-[#4d627e] uppercase mb-1.5"
-                        >
-                          Corporate Email
-                        </label>
-                        <input
-                          id="form-email"
-                          type="email"
-                          required
-                          value={formData.email}
-                          onChange={(e) =>
-                            setFormData({ ...formData, email: e.target.value })
-                          }
-                          placeholder="email"
-                          className="w-full text-sm border border-[#003d81]/10 hover:border-[#0d896f]/30 focus:border-[#0d896f] rounded-xl p-3 bg-[#f7f8fc] focus:bg-white outline-none transition-all"
-                        />
-                      </div>
-                    </div>
-
-                    <div>
-                      <label
-                        htmlFor="form-message"
-                        className="block text-xs font-semibold text-[#4d627e] uppercase mb-1.5"
-                      >
-                        Inquiry Details
-                      </label>
-                      <textarea
-                        id="form-message"
-                        required
-                        rows={4}
-                        value={formData.message}
-                        onChange={(e) =>
-                          setFormData({ ...formData, message: e.target.value })
-                        }
-                        placeholder="How can our telematics team support your underwriting operations?"
-                        className="w-full text-sm border border-[#003d81]/10 hover:border-[#0d896f]/30 focus:border-[#0d896f] rounded-xl p-3 bg-[#f7f8fc] focus:bg-white outline-none resize-none transition-all"
-                      />
-                    </div>
-
-                    <button
-                      type="submit"
-                      className="w-full bg-[#0d896f] hover:bg-[#0b705c] text-white font-semibold py-3 px-6 rounded-xl shadow-md hover:shadow-lg transition-all duration-200 text-sm"
-                    >
-                      Submit Message
-                    </button>
-                  </form>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Footer */}
-      <footer className="bg-[#10233f] text-[#8493a8] border-t border-white/5 py-12 md:py-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid md:grid-cols-12 gap-8 md:gap-12">
-            {/* Branding Column */}
-            <div className="md:col-span-8 space-y-4">
-              <div className="flex items-center space-x-3">
-                <img
-                  src={dbsLogo}
-                  alt="DBS Logo"
-                  className="h-16 w-auto object-contain brightness-0 invert"
-                />
-                <span className="text-lg font-bold tracking-tight text-white ">
-                  Driver{" "}
-                  <span className="text-white font-semibold">
-                    Behavior Score
-                  </span>
-                </span>
-              </div>
-              <p className="text-sm leading-relaxed max-w-sm">
-                Dedicated driver behavior telemetry modeling. Standardizing
-                score outputs and helping underwriters protect vehicle risk
-                portfolios globally.
-              </p>
-            </div>
-
-            {/* Quick Links Column */}
-            <div className="md:col-span-4">
-              <h4 className="text-white font-bold text-xs uppercase tracking-wider mb-4">
-                Quick Navigation
-              </h4>
-              <ul className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-                {navLinks.map((link) => (
-                  <li key={link.name}>
-                    <a
-                      href={link.href}
-                      className="hover:text-white transition-colors"
-                    >
-                      {link.name}
-                    </a>
-                  </li>
-                ))}
-                <li>
-                  <a
-                    href="/login"
-                    className="hover:text-white transition-colors font-medium"
-                  >
-                    Login
-                  </a>
-                </li>
-              </ul>
-            </div>
-
-            {/* Social Placeholder Column */}
-            {/* <div className="md:col-span-3">
-              <h4 className="text-white font-bold text-xs uppercase tracking-wider mb-4">
-                Follow Platforms
-              </h4>
-              <div className="flex items-center gap-3">
-                <a
-                  href="#"
-                  className="p-2.5 bg-white/5 hover:bg-white/10 text-white rounded-lg transition-colors text-sm font-semibold flex items-center justify-center"
-                >
-                  LinkedIn
-                </a>
-                <a
-                  href="#"
-                  className="p-2.5 bg-white/5 hover:bg-white/10 text-white rounded-lg transition-colors text-sm font-semibold flex items-center justify-center"
-                >
-                  Twitter
-                </a>
-                <a
-                  href="#"
-                  className="p-2.5 bg-white/5 hover:bg-white/10 text-white rounded-lg transition-colors text-sm font-semibold flex items-center justify-center"
-                >
-                  GitHub
-                </a>
-              </div>
-            </div> */}
-          </div>
-
-          <div className="mt-12 pt-8 border-t border-white/5 text-center text-xs flex flex-col sm:flex-row items-center justify-between gap-4">
-            <p>
-              © {new Date().getFullYear()} DBS Driver Behavior Score. All rights
-              reserved.
-            </p>
-            <div className="flex space-x-6">
-              <a href="#" className="hover:text-white transition-colors">
-                Privacy Policy
-              </a>
-              <a href="#" className="hover:text-white transition-colors">
-                Terms of Service
-              </a>
-            </div>
-          </div>
+        <div className="footer-bottom">
+          <div className="footer-copy">© 2026 Social-Impact Innovations Pvt. Ltd. All rights reserved.</div>
+          <div className="footer-notice">DBS scores are derived from enforcement records and, in future phases, telematics and transport ecosystem data. Scores are vehicle-level only; no personal identification information is processed or displayed. Access restricted to authorised insurers under a formal Data Access Agreement. Compliant with DPDP Act, 2023.</div>
         </div>
       </footer>
     </div>
-
-      {/* ── Scroll-to-top button with circular progress ring ── */}
-      {showScrollTop && (
-        <button
-          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-          aria-label="Scroll to top"
-          style={{
-            position: 'fixed',
-            bottom: '28px',
-            right: '28px',
-            zIndex: 9999,
-            width: '48px',
-            height: '48px',
-            borderRadius: '50%',
-            background: 'white',
-            border: 'none',
-            padding: 0,
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            boxShadow: '0 4px 20px rgba(9,44,84,0.18)',
-            transition: 'transform 0.2s ease, box-shadow 0.2s ease',
-          }}
-          onMouseEnter={e => {
-            (e.currentTarget as HTMLButtonElement).style.transform = 'translateY(-3px)';
-            (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 8px 28px rgba(9,44,84,0.28)';
-          }}
-          onMouseLeave={e => {
-            (e.currentTarget as HTMLButtonElement).style.transform = 'translateY(0)';
-            (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 4px 20px rgba(9,44,84,0.18)';
-          }}
-        >
-          {/* SVG: faint track ring + animated progress ring */}
-          <svg
-            width="48"
-            height="48"
-            viewBox="0 0 52 52"
-            style={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              transform: 'rotate(-90deg)',
-              pointerEvents: 'none',
-            }}
-          >
-            {/* track */}
-            <circle
-              cx="26" cy="26" r="23"
-              fill="none"
-              stroke="#092C54"
-              strokeWidth="2.5"
-              strokeOpacity="0.15"
-            />
-            {/* progress */}
-            <circle
-              cx="26" cy="26" r="23"
-              fill="none"
-              stroke="#092C54"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-              strokeDasharray={`${2 * Math.PI * 23}`}
-              strokeDashoffset={`${2 * Math.PI * 23 * (1 - scrollProgress / 100)}`}
-              style={{ transition: 'stroke-dashoffset 0.12s linear' }}
-            />
-          </svg>
-          {/* Up-arrow icon */}
-          <svg
-            width="18"
-            height="18"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="#092C54"
-            strokeWidth="2.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            style={{ position: 'relative', zIndex: 1 }}
-          >
-            <polyline points="18 15 12 9 6 15" />
-          </svg>
-        </button>
-      )}
-    </>
   );
 }
+

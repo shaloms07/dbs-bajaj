@@ -1,5 +1,4 @@
-import bajajLogo from '../assets/bajaj-logo.svg';
-import dbsLogo from '../assets/dbs-logo.png';
+import dbscoreLogo from '../assets/dbscore-wordmark.png';
 import { AuthUser } from '../store/authStore';
 
 export type BrandId = 'dbs' | 'bajaj';
@@ -40,9 +39,9 @@ export const BRANDING_CONFIGS: Record<BrandId, BrandingConfig> = {
     underwritingConsoleLabel: 'DBS underwriting console',
     vehicleLookupReportTitle: 'DBS Vehicle Lookup Report',
     filePrefix: 'dbs',
-    logoSrc: dbsLogo,
-    logoAlt: 'DBS logo',
-    loginHeadline: 'Assess vehicle risk with the DBS workflow.',
+    logoSrc: dbscoreLogo,
+    logoAlt: 'dbscore logo',
+    loginHeadline: 'See the risk behind every vehicle. Before you insure it.',
     loginAccessCopy: 'Enter your credentials to access the DBS Insurer Dashboard.'
   },
   bajaj: {
@@ -56,9 +55,9 @@ export const BRANDING_CONFIGS: Record<BrandId, BrandingConfig> = {
     underwritingConsoleLabel: 'Bajaj General Insurance underwriting console',
     vehicleLookupReportTitle: 'Bajaj Vehicle Lookup Report',
     filePrefix: 'bajaj',
-    logoSrc: bajajLogo,
-    logoAlt: 'Bajaj General Insurance logo',
-    loginHeadline: 'Assess vehicle risk with the DBS workflow.',
+    logoSrc: dbscoreLogo,
+    logoAlt: 'dbscore logo',
+    loginHeadline: 'See the risk behind every vehicle. Before you insure it.',
     loginAccessCopy: 'Enter your credentials to access the Bajaj Insurer Dashboard.'
   }
 };

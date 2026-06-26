@@ -79,7 +79,7 @@ function riskColor(value: string) {
   if (normalized.includes('low')) return '#1D9E75';
   if (normalized.includes('excellent')) return '#0F6E56';
   if (normalized.includes('exemplary')) return '#064E3B';
-  return '#005dac';
+  return '#00AEEF';
 }
 
 function statusClass(status: MonthStatus) {
