@@ -1,4 +1,5 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import dbscoreLogo from '../assets/dbscore-wordmark.png';
@@ -94,9 +95,41 @@ const workflow = [
   ['04', 'Audit', 'Complete, Traceable Record', 'Every query, score, band, and modifier applied is logged and linked to the underlying data records for review.']
 ];
 
+const legalContent = {
+  privacy: {
+    title: 'Privacy Policy',
+    updated: 'Last updated: June 2026',
+    intro: 'This Privacy Policy explains how Social-Impact Innovations Pvt. Ltd. handles information through the Driver Behaviour Score platform and dbscore.in.',
+    sections: [
+      ['Information We Process', 'DBS is designed for authorised insurer workflows and processes vehicle-level behavioural signals such as registration number inputs, enforcement record references, score outputs, risk bands, query logs, and authorised user account details.'],
+      ['How We Use Information', 'Information is used to generate DBS scores, support underwriting decisions, maintain audit trails, improve platform reliability, prevent misuse, and respond to insurer support or compliance requests.'],
+      ['Personal Data Position', 'The landing page does not collect personal identification information. Platform access is restricted to authorised insurers, and DBS score outputs are intended to be vehicle-level underwriting intelligence.'],
+      ['Data Sharing', 'We share platform information only with authorised insurer users, service providers supporting platform operations, and regulatory or legal authorities where required by law or a formal process.'],
+      ['Security and Retention', 'We apply reasonable technical and organisational safeguards and retain records only for operational, contractual, audit, legal, and compliance purposes.'],
+      ['Contact', 'For privacy questions, data requests, or DPDP Act related enquiries, contact contact@social-impact.in.']
+    ]
+  },
+  terms: {
+    title: 'Terms and Conditions',
+    updated: 'Last updated: June 2026',
+    intro: 'These Terms and Conditions govern use of dbscore.in and the Driver Behaviour Score platform operated by Social-Impact Innovations Pvt. Ltd.',
+    sections: [
+      ['Authorised Use', 'DBS is intended only for authorised insurers, underwriting teams, and approved representatives under a formal access arrangement or Data Access Agreement.'],
+      ['Permitted Purpose', 'Users may use DBS outputs for motor insurance underwriting, quotation, renewal, portfolio analysis, audit review, and related internal business purposes.'],
+      ['No Consumer Access', 'The platform is not a public consumer credit, identity, or personal profiling service. Unauthorised access, scraping, reverse engineering, or misuse of score outputs is prohibited.'],
+      ['Underwriting Responsibility', 'DBS provides data-backed risk intelligence and recommended modifiers. Final pricing, eligibility, compliance, customer communication, and underwriting decisions remain the responsibility of the insurer.'],
+      ['Accuracy and Availability', 'We work to maintain reliable data processing and platform availability, but DBS outputs depend on source data quality, availability, and validation status. Services may change as data sources and scoring models evolve.'],
+      ['Contact', 'For access, contract, or terms-related questions, contact contact@social-impact.in.']
+    ]
+  }
+} as const;
+
+type LegalModalKey = keyof typeof legalContent;
+
 export default function LandingPage() {
   const navigate = useNavigate();
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const [activeModal, setActiveModal] = useState<LegalModalKey | null>(null);
 
   useEffect(() => {
     document.title = 'Driver Behaviour Score - dbscore.in';
@@ -119,7 +152,25 @@ export default function LandingPage() {
     };
   }, []);
 
+  useEffect(() => {
+    if (!activeModal) {
+      return undefined;
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setActiveModal(null);
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [activeModal]);
+
   const goToApp = () => navigate(isAuthenticated ? '/lookup' : '/login');
+  const modalContent = activeModal ? legalContent[activeModal] : null;
 
   return (
     <div className="dbs-landing" id="top">
@@ -353,8 +404,8 @@ export default function LandingPage() {
           <div>
             <div className="footer-col-title">Legal</div>
             <ul className="footer-links">
-              <li><a href="#">Privacy Policy</a></li>
-              <li><a href="#">Terms of Service</a></li>
+              <li><button type="button" onClick={() => setActiveModal('privacy')}>Privacy Policy</button></li>
+              <li><button type="button" onClick={() => setActiveModal('terms')}>Terms and Conditions</button></li>
               <li><a href="#">DPDP Compliance</a></li>
               <li><a href="#">Data Source Notice</a></li>
             </ul>
@@ -365,6 +416,37 @@ export default function LandingPage() {
           <div className="footer-notice">DBS scores are derived from enforcement records and, in future phases, telematics and transport ecosystem data. Scores are vehicle-level only; no personal identification information is processed or displayed. Access restricted to authorised insurers under a formal Data Access Agreement. Compliant with DPDP Act, 2023.</div>
         </div>
       </footer>
+
+      {modalContent ? (
+        <div className="legal-modal-backdrop" role="presentation" onMouseDown={() => setActiveModal(null)}>
+          <div
+            className="legal-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="legal-modal-title"
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <div className="legal-modal-header">
+              <div>
+                <div className="legal-modal-kicker">{modalContent.updated}</div>
+                <h2 id="legal-modal-title">{modalContent.title}</h2>
+              </div>
+              <button type="button" className="legal-modal-close" aria-label="Close modal" onClick={() => setActiveModal(null)}>
+                <X size={18} aria-hidden="true" />
+              </button>
+            </div>
+            <p className="legal-modal-intro">{modalContent.intro}</p>
+            <div className="legal-modal-sections">
+              {modalContent.sections.map(([title, body]) => (
+                <section key={title}>
+                  <h3>{title}</h3>
+                  <p>{body}</p>
+                </section>
+              ))}
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
