@@ -1,6 +1,6 @@
 import { ChangeEvent, FormEvent, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import bannerImage from '../assets/motor_clp_banner.webp';
+import bannerImage from '../assets/magic_edit3.png';
 import { useDefaultBranding } from '../branding/useBranding';
 import { useAuthStore } from '../store/authStore';
 import { login as loginRequest } from '../services/authService';
