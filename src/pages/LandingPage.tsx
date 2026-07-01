@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { X } from "lucide-react";
+import { ArrowUp, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "../store/authStore";
 import dbscoreLogo from "../assets/dbscore-wordmark.png";
@@ -236,6 +236,7 @@ export default function LandingPage() {
   const navigate = useNavigate();
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const [activeModal, setActiveModal] = useState<LegalModalKey | null>(null);
+  const [showScrollTop, setShowScrollTop] = useState(false);
 
   useEffect(() => {
     document.title = "Driver Behaviour Score - dbscore.in";
@@ -261,9 +262,24 @@ export default function LandingPage() {
   }, []);
 
   useEffect(() => {
+    const handleScroll = () => {
+      setShowScrollTop(window.scrollY > 420);
+    };
+
+    handleScroll();
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+    };
+  }, []);
+
+  useEffect(() => {
     if (!activeModal) {
       return undefined;
     }
+
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
@@ -273,11 +289,13 @@ export default function LandingPage() {
 
     document.addEventListener("keydown", handleKeyDown);
     return () => {
+      document.body.style.overflow = originalOverflow;
       document.removeEventListener("keydown", handleKeyDown);
     };
   }, [activeModal]);
 
   const goToApp = () => navigate(isAuthenticated ? "/lookup" : "/login");
+  const scrollToTop = () => window.scrollTo({ top: 0, behavior: "smooth" });
   const modalContent = activeModal ? legalContent[activeModal] : null;
 
   return (
@@ -699,12 +717,12 @@ export default function LandingPage() {
                   Terms and Conditions
                 </button>
               </li>
-              <li>
+              {/* <li>
                 <a href="#">DPDP Compliance</a>
               </li>
               <li>
                 <a href="#">Data Source Notice</a>
-              </li>
+              </li> */}
             </ul>
           </div>
         </div>
@@ -721,6 +739,15 @@ export default function LandingPage() {
           </div>
         </div>
       </footer>
+
+      <button
+        type="button"
+        className={`landing-scroll-top ${showScrollTop ? "is-visible" : ""}`}
+        aria-label="Scroll to top"
+        onClick={scrollToTop}
+      >
+        <ArrowUp size={18} aria-hidden="true" />
+      </button>
 
       {modalContent ? (
         <div
