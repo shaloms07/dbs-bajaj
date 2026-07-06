@@ -1,10 +1,15 @@
-const DEFAULT_API_BASE_URL = 'https://api.dbscore.in/';
-const apiBaseUrl = (import.meta.env.VITE_DBS_API_BASE_URL || DEFAULT_API_BASE_URL).replace(/\/+$/, '');
+import { AuthUser, useAuthStore } from '../store/authStore';
+import { apiBaseUrl, apiFetch, getApiErrorMessage, parseJson } from './apiClient';
 
-export interface AuthUser {
-  name: string;
+
+export interface LoginResponse {
   email?: string;
+  name?: string;
+  username?: string;
   insurer?: string;
+  user?: Partial<AuthUser>;
+  detail?: string;
+  message?: string;
 }
 
 export interface LoginPayload {
@@ -13,59 +18,68 @@ export interface LoginPayload {
 }
 
 export interface AuthSession {
-  token: string;
-  refreshToken: string | null;
-  accessTokenExpiresAt: number | null;
-  refreshTokenExpiresAt: number | null;
   user: AuthUser;
 }
 
-function toAuthSession(
-  data: any,
-  fallbackUsername?: string
-): AuthSession {
+function toAuthUser(data: LoginResponse | null, fallbackUsername: string): AuthUser {
+  const responseUser = data?.user && typeof data.user === 'object' ? data.user : {};
+  const name = responseUser.name ?? data?.name ?? fallbackUsername;
+  const username = responseUser.username ?? data?.username ?? fallbackUsername;
+  const email = responseUser.email ?? data?.email;
+  const insurer = responseUser.insurer ?? data?.insurer;
+
+  if (typeof name !== 'string' || !name.trim()) {
+    throw new Error('Login response is missing user details');
+  }
+
   return {
-    token: '',
-    refreshToken: null,
-    accessTokenExpiresAt: null,
-    refreshTokenExpiresAt: null,
-    user: {
-      name: (data && typeof data.name === 'string' && data.name) || fallbackUsername || 'User',
-      email: (data && typeof data.email === 'string' && data.email) || fallbackUsername
-    }
+    name,
+    username: typeof username === 'string' && username ? username : undefined,
+    email: typeof email === 'string' && email ? email : undefined,
+    insurer: typeof insurer === 'string' && insurer ? insurer : undefined
   };
 }
 
 export async function login(payload: LoginPayload): Promise<AuthSession> {
-  const response = await fetch(`${apiBaseUrl}/auth/login`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    credentials: 'include',
-    body: JSON.stringify(payload)
-  });
+  const username = payload.username.trim();
 
-  const data = (await response.json().catch(() => null)) as any;
-
-  if (!response.ok) {
-    const message =
-      (data && typeof data.detail === 'string' && data.detail) ||
-      (data && typeof data.message === 'string' && data.message) ||
-      'Login failed';
-    throw new Error(message);
+  if (!username || !payload.password) {
+    throw new Error('Enter credentials');
   }
 
-  return toAuthSession(data, payload.username);
+  let response: Response;
+
+  try {
+    response = await apiFetch(`${apiBaseUrl}/auth/login`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ username, password: payload.password })
+    });
+  } catch (error) {
+    throw new Error(error instanceof Error ? error.message : 'Unable to reach auth server');
+  }
+
+  const data = await parseJson<LoginResponse>(response);
+
+  if (!response.ok) {
+    throw new Error(getApiErrorMessage(data, 'Login failed'));
+  }
+
+  return {
+    user: toAuthUser(data, username)
+  };
 }
 
 export async function logout(): Promise<void> {
   try {
-    await fetch(`${apiBaseUrl}/auth/logout`, {
-      method: 'POST',
-      credentials: 'include',
+    await apiFetch(`${apiBaseUrl}/auth/logout`, {
+      method: 'POST'
     });
-  } catch {
-    // best-effort — proceed to clear local state even if the request fails
+  } catch (error) {
+    console.error('Logout error:', error);
+  } finally {
+    useAuthStore.getState().clearAuth();
   }
 }

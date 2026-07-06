@@ -1,8 +1,14 @@
 import { useEffect, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useLocation } from "react-router-dom";
+import { useBranding } from "../branding/useBranding";
 import { useScoreLookup } from "../hooks/useScoreLookup";
 import { ScoreResult } from "../types/score";
 import { scoreColor } from "../utils/scoreColor";
+
+type LookupRouteState = {
+  regNo?: string;
+  includeRc?: boolean;
+};
 
 function formatBandLabel(value: string) {
   return value
@@ -63,15 +69,13 @@ function formatVehicleNumber(value: string) {
 }
 
 export default function VehicleLookup() {
-  const [searchParams, setSearchParams] = useSearchParams();
+  const branding = useBranding();
+  const location = useLocation();
+  const routeState = location.state as LookupRouteState | null;
   const [regInput, setRegInput] = useState("");
   const [queryReg, setQueryReg] = useState("");
-  const regNoFromUrl =
-    searchParams
-      .get("regNo")
-      ?.toUpperCase()
-      .replace(/[^A-Z0-9]/g, "") ?? "";
-  const includeRc = searchParams.get("include_rc") === "true";
+  const [includeRc, setIncludeRc] = useState(Boolean(routeState?.includeRc));
+  const regNoFromRoute = normalizeVehicleNumber(routeState?.regNo ?? "");
 
   const formattedReg = normalizeVehicleNumber(regInput);
   const result = useScoreLookup(queryReg, includeRc);
@@ -85,25 +89,15 @@ export default function VehicleLookup() {
 
   const onQuery = () => {
     setQueryReg(formattedReg);
-    setSearchParams({ regNo: formattedReg, include_rc: String(includeRc) });
   };
 
   const onRecentQuery = (reg: string) => {
     setRegInput(formatVehicleNumber(reg));
     setQueryReg(normalizeVehicleNumber(reg));
-    setSearchParams({
-      regNo: normalizeVehicleNumber(reg),
-      include_rc: String(includeRc),
-    });
   };
 
   const setVehicleView = (nextIncludeRc: boolean) => {
-    const nextParams = new URLSearchParams(searchParams);
-    nextParams.set("include_rc", String(nextIncludeRc));
-    if (queryReg) {
-      nextParams.set("regNo", queryReg);
-    }
-    setSearchParams(nextParams);
+    setIncludeRc(nextIncludeRc);
   };
 
   const displayScore = selected ? Math.round(selected.score) : 0;
@@ -182,10 +176,12 @@ export default function VehicleLookup() {
 
   const exportCsv = () => {
     if (!selected) return;
+    if (!window.confirm("Export this lookup report? It may contain sensitive vehicle and violation data.")) return;
 
     const summaryRows = [
       ["Vehicle Lookup Summary"],
       ["Field", "Value"],
+      ["Generated At", new Date().toLocaleString("en-IN")],
       ...currentVehicleSummary,
       [],
       ["Violation History"],
@@ -208,15 +204,14 @@ export default function VehicleLookup() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = `dbs_${sanitizeFileName(
-      selected.regNo || formattedReg || "vehicle",
-    )}_lookup.csv`;
+    link.download = `${branding.filePrefix}_vehicle_lookup_${sanitizeFileName(new Date().toISOString())}.csv`;
     link.click();
     URL.revokeObjectURL(url);
   };
 
   const exportPdf = () => {
     if (!selected) return;
+    if (!window.confirm("Export this lookup report? It may contain sensitive vehicle and violation data.")) return;
 
     const rowsHtml = exportTableRows
       .map(
@@ -246,7 +241,7 @@ export default function VehicleLookup() {
       <!doctype html>
       <html>
         <head>
-          <title>DBS Vehicle Lookup Report</title>
+          <title>${escapeHtml(branding.vehicleLookupReportTitle)}</title>
           <meta charset="utf-8" />
           <style>
             @page { size: A4; margin: 16mm; }
@@ -387,7 +382,7 @@ export default function VehicleLookup() {
           <div class="report">
             <div class="report-header">
               <div>
-                <p class="report-eyebrow">DBS vehicle lookup report</p>
+                <p class="report-eyebrow">${escapeHtml(branding.vehicleLookupReportTitle)}</p>
                 <h1 class="report-title">${escapeHtml(
                   selected.regNo || formattedReg || "Vehicle",
                 )}</h1>
@@ -398,7 +393,8 @@ export default function VehicleLookup() {
                   Queried: ${escapeHtml(
                     formatDateTime(selected.queriedAt),
                   )}<br />
-                  Fresh as of: ${escapeHtml(formatDate(selected.freshAsOf))}
+                  Fresh as of: ${escapeHtml(formatDate(selected.freshAsOf))}<br />
+                  Generated: ${escapeHtml(new Date().toLocaleString("en-IN"))}
                 </div>
               </div>
               <div class="report-band">${escapeHtml(
@@ -463,11 +459,11 @@ export default function VehicleLookup() {
   };
 
   useEffect(() => {
-    if (!regNoFromUrl || regNoFromUrl === queryReg) return;
+    if (!regNoFromRoute || regNoFromRoute === queryReg) return;
 
-    setRegInput(formatVehicleNumber(regNoFromUrl));
-    setQueryReg(regNoFromUrl);
-  }, [queryReg, regNoFromUrl]);
+    setRegInput(formatVehicleNumber(regNoFromRoute));
+    setQueryReg(regNoFromRoute);
+  }, [queryReg, regNoFromRoute]);
 
   useEffect(() => {
     if (!selected) {
@@ -498,8 +494,7 @@ export default function VehicleLookup() {
           <div className="lookup-insight-item">
             <strong>Run a registration lookup</strong>
             <span>
-              Enter a vehicle number below to pull the latest DBS score and
-              violation history.
+              Enter a vehicle number below to pull the latest {branding.scoreLabel} and violation history.
             </span>
           </div>
           <div className="lookup-insight-item">

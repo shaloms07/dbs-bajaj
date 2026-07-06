@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-
+import { useBranding } from '../branding/useBranding';
 import { useApiKeys } from '../hooks/useApiKeys';
 
 // Mock Response Payloads
@@ -71,7 +71,7 @@ const SERVER_ERROR_MOCK = {
 };
 
 export default function APIDocs() {
-  const apiName = 'DBS API';
+  const branding = useBranding();
   const { data: apiKeys = [] } = useApiKeys();
 
   const [activeSection, setActiveSection] = useState<'endpoint-score' | 'endpoint-vehicles'>('endpoint-score');
@@ -163,7 +163,7 @@ export default function APIDocs() {
     const title = isScore ? 'Get Score' : 'Get Vehicle';
     const path = isScore ? '/api/v1/score/{vehicle_number}' : '/api/v1/vehicles/{vehicle_number}';
     const desc = isScore
-      ? `Fetches the vehicle risk parameters, computed DBS score, premium modification percentage, and details of all underlying traffic violations.`
+      ? `Fetches the vehicle risk parameters, computed ${branding.scoreLabel}, premium modification percentage, and details of all underlying traffic violations.`
       : `Fetches the RTO Registration Card (RC) details and physical specifications for the given vehicle number.`;
 
     const codeSnippetToDisplay = isScore ? scoreSnippetCode : vehicleSnippetCode;
@@ -265,7 +265,7 @@ export default function APIDocs() {
                   </td>
                   <td>
                     <div className="api-param-desc">
-                      Successful response. Returns the requested {isScore ? `DBS score stats and violation details` : 'vehicle physical specification details'}.
+                      Successful response. Returns the requested {isScore ? `${branding.scoreLabel} stats and violation details` : 'vehicle physical specification details'}.
                     </div>
                   </td>
                 </tr>
@@ -399,7 +399,7 @@ export default function APIDocs() {
   return (
     <div className="api-page">
       <section className="card api-hero-card" style={{ marginBottom: 0 }}>
-        <p className="api-eyebrow">{apiName} Documentation</p>
+        <p className="api-eyebrow">{branding.apiName} Documentation</p>
         <h1>REST API Reference Specs</h1>
         <p style={{ margin: '8px 0 0 0' }}>
           Explore endpoints, query formats, request header security, and response specifications to build your client integrations.

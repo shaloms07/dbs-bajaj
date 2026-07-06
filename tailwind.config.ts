@@ -5,9 +5,9 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['DM Sans', 'ui-sans-serif', 'system-ui'],
-        mono: ['DM Mono', 'ui-monospace', 'SFMono-Regular'],
-        serif: ['DM Sans', 'ui-sans-serif', 'system-ui']
+        sans: ['Inter', 'ui-sans-serif', 'system-ui'],
+        mono: ['SF Mono', 'ui-monospace', 'SFMono-Regular'],
+        serif: ['Inter', 'ui-sans-serif', 'system-ui']
       }
     }
   },

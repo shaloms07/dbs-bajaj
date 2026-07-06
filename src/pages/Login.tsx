@@ -1,7 +1,7 @@
-import { ChangeEvent, FormEvent, useState } from 'react';
+import { ChangeEvent, FormEvent, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import dbsLogo from '../assets/dbs-logo.png';
-import bannerImage from '../assets/motor_clp_banner.webp';
+import bannerImage from '../assets/magic_edit3.png';
+import { useDefaultBranding } from '../branding/useBranding';
 import { useAuthStore } from '../store/authStore';
 import { login as loginRequest } from '../services/authService';
 
@@ -11,7 +11,12 @@ export default function Login() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const setAuth = useAuthStore((state) => state.setAuth);
+  const branding = useDefaultBranding();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    document.title = branding.appName;
+  }, [branding.appName]);
 
   async function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -23,13 +28,7 @@ export default function Login() {
     setLoading(true);
     try {
       const session = await loginRequest({ username: username.trim(), password });
-      setAuth(
-        session.token,
-        session.user,
-        session.refreshToken,
-        session.accessTokenExpiresAt,
-        session.refreshTokenExpiresAt
-      );
+      setAuth(session.user);
       navigate('/lookup');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to sign in');
@@ -44,10 +43,10 @@ export default function Login() {
         <div className="login-visual-overlay" />
         <div className="login-visual-content">
           <div className="login-brand-chip">
-            <img src={dbsLogo} alt="DBS platform logo" className="login-brand-mark" />
+            <img src={branding.logoSrc} alt={branding.logoAlt} className="login-brand-mark" />
           </div>
           {/* <p className="login-eyebrow">Motor underwriting platform</p> */}
-          <h1>Assess vehicle risk with a driver-behaviour-first workflow.</h1>
+          <h1>{branding.loginHeadline}</h1>
           <p className="login-copy">
             Built for quick underwriting lookups, score review, and violation history in a clean, secure interface.
           </p>
@@ -78,7 +77,7 @@ export default function Login() {
           <div className="login-card-top">
             <p className="login-card-kicker">Secure sign in</p>
             <h2>Welcome back</h2>
-            <p>Enter your credentials to access the DBS demo dashboard.</p>
+            <p>{branding.loginAccessCopy}</p>
           </div>
 
           <form onSubmit={submit} className="login-form">
@@ -111,9 +110,19 @@ export default function Login() {
             <button type="submit" disabled={loading} className="login-submit">
               {loading ? 'Signing in...' : 'Sign in'}
             </button>
+
+            <div className="login-back-container">
+              <button
+                type="button"
+                onClick={() => navigate('/')}
+                className="login-back-link"
+              >
+                ← Back to Home
+              </button>
+            </div>
           </form>
 
-          <div className="login-footer-note">DBS underwriting demo console</div>
+          <div className="login-footer-note">{branding.underwritingConsoleLabel}</div>
         </div>
       </section>
     </div>

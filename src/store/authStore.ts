@@ -2,30 +2,15 @@ import { create } from 'zustand';
 
 export interface AuthUser {
   name: string;
+  username?: string;
   email?: string;
   insurer?: string;
 }
 
 interface AuthState {
-  token: string | null;
-  refreshToken: string | null;
-  accessTokenExpiresAt: number | null;
-  refreshTokenExpiresAt: number | null;
   user: AuthUser | null;
   isAuthenticated: boolean;
-  setAuth: (
-    token: string,
-    user: AuthUser,
-    refreshToken?: string | null,
-    accessTokenExpiresAt?: number | null,
-    refreshTokenExpiresAt?: number | null
-  ) => void;
-  updateTokens: (
-    token: string,
-    refreshToken?: string | null,
-    accessTokenExpiresAt?: number | null,
-    refreshTokenExpiresAt?: number | null
-  ) => void;
+  setAuth: (user: AuthUser) => void;
   clearAuth: () => void;
 }
 
@@ -40,59 +25,53 @@ function legacyStorageKey(name: string) {
   return `${LEGACY_STORAGE_PREFIX}${name}`;
 }
 
+function clearTokenStorage() {
+  localStorage.removeItem(storageKey('token'));
+  localStorage.removeItem(storageKey('refresh_token'));
+  localStorage.removeItem(storageKey('access_token_expires_at'));
+  localStorage.removeItem(storageKey('refresh_token_expires_at'));
+  localStorage.removeItem(legacyStorageKey('token'));
+  localStorage.removeItem(legacyStorageKey('refresh_token'));
+  localStorage.removeItem(legacyStorageKey('access_token_expires_at'));
+  localStorage.removeItem(legacyStorageKey('refresh_token_expires_at'));
+}
+
 export const useAuthStore = create<AuthState>((set) => ({
-  token: null,
-  refreshToken: null,
-  accessTokenExpiresAt: null,
-  refreshTokenExpiresAt: null,
   user: null,
   isAuthenticated: false,
-  setAuth: (_token, user) => {
+  setAuth: (user) => {
+    clearTokenStorage();
     localStorage.setItem(storageKey('user'), JSON.stringify(user));
-    set({ token: null, refreshToken: null, accessTokenExpiresAt: null, refreshTokenExpiresAt: null, user, isAuthenticated: true });
-  },
-  updateTokens: () => {
-    // No-op: we do not store tokens
+    set({ user, isAuthenticated: true });
   },
   clearAuth: () => {
-    localStorage.removeItem(storageKey('token'));
-    localStorage.removeItem(storageKey('refresh_token'));
-    localStorage.removeItem(storageKey('access_token_expires_at'));
-    localStorage.removeItem(storageKey('refresh_token_expires_at'));
+    clearTokenStorage();
     localStorage.removeItem(storageKey('user'));
-    localStorage.removeItem(legacyStorageKey('token'));
-    localStorage.removeItem(legacyStorageKey('refresh_token'));
-    localStorage.removeItem(legacyStorageKey('access_token_expires_at'));
-    localStorage.removeItem(legacyStorageKey('refresh_token_expires_at'));
     localStorage.removeItem(legacyStorageKey('user'));
-    set({ token: null, refreshToken: null, accessTokenExpiresAt: null, refreshTokenExpiresAt: null, user: null, isAuthenticated: false });
+    set({ user: null, isAuthenticated: false });
   }
 }));
 
 export function hydrateAuth() {
+  clearTokenStorage();
+
   const userJson = localStorage.getItem(storageKey('user')) ?? localStorage.getItem(legacyStorageKey('user'));
-  if (userJson) {
-    try {
-      const user = JSON.parse(userJson);
-      useAuthStore.setState({
-        token: null,
-        refreshToken: null,
-        accessTokenExpiresAt: null,
-        refreshTokenExpiresAt: null,
-        user,
-        isAuthenticated: true
-      });
-      localStorage.setItem(storageKey('user'), userJson);
-    } catch {
-      useAuthStore.setState({
-        token: null,
-        refreshToken: null,
-        accessTokenExpiresAt: null,
-        refreshTokenExpiresAt: null,
-        user: null,
-        isAuthenticated: false
-      });
+
+  if (!userJson) {
+    return;
+  }
+
+  try {
+    const user = JSON.parse(userJson) as AuthUser;
+    if (!user || typeof user !== 'object' || typeof user.name !== 'string') {
+      throw new Error('Invalid stored user');
     }
+
+    useAuthStore.setState({ user, isAuthenticated: true });
+    localStorage.setItem(storageKey('user'), JSON.stringify(user));
+  } catch {
+    localStorage.removeItem(storageKey('user'));
+    localStorage.removeItem(legacyStorageKey('user'));
+    useAuthStore.setState({ user: null, isAuthenticated: false });
   }
 }
-

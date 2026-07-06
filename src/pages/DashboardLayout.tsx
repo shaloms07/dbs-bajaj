@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
-import dbsLogo from '../assets/dbs-logo.png';
+import { useBranding } from '../branding/useBranding';
 import { useAuthStore } from '../store/authStore';
 import { logout as apiLogout } from '../services/authService';
 
@@ -19,18 +19,18 @@ const navItemClass = ({ isActive }: { isActive: boolean }) => `nav-item ${isActi
 
 export default function DashboardLayout() {
   const user = useAuthStore((state) => state.user);
+  const branding = useBranding();
   const location = useLocation();
   const pathKey = location.pathname.split('/').filter(Boolean).at(-1) ?? 'lookup';
   const activePage = pageTitles[pathKey] ?? 'Vehicle Lookup';
-  const accountLabel = user?.email ?? user?.name ?? 'Unknown user';
+  const accountLabel = user?.username ?? user?.email ?? user?.name ?? 'Unknown user';
 
   useEffect(() => {
-    document.title = `DBS Dashboard | ${activePage}`;
-  }, [activePage]);
+    document.title = `${branding.appName} | ${activePage}`;
+  }, [activePage, branding.appName]);
 
   const logout = async () => {
     await apiLogout();
-    useAuthStore.getState().clearAuth();
     window.location.href = '/login';
   };
 
@@ -38,13 +38,13 @@ export default function DashboardLayout() {
     <>
       <aside className="sidebar">
         <div className="sidebar-logo" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <img src={dbsLogo} alt="DBS platform logo" style={{ width: '70%', objectFit: 'contain' }} />
+          <img src={branding.logoSrc} alt={branding.logoAlt} style={{ width: '70%', objectFit: 'contain' }} />
           <div className="logo-sub" />
         </div>
 
         <div className="insurer-badge">
           <div className="label">Client</div>
-          <div className="name">DBS Demo</div>
+          <div className="name">{branding.companyName}</div>
           <div style={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: 11, marginTop: 4 }}>{accountLabel}</div>
         </div>
 
@@ -98,7 +98,7 @@ export default function DashboardLayout() {
         <div className="sidebar-footer">
           <div className="api-status">
             <div className="status-dot"></div>
-            DBS API · All systems operational
+            {branding.apiName} · All systems operational
           </div>
           <button onClick={logout} className="lookup-btn lookup-btn--danger" style={{ width: '100%', marginTop: 8 }}>
             Logout
@@ -109,10 +109,10 @@ export default function DashboardLayout() {
       <main className="main">
         <header className="topbar">
           <div className="topbar-brand">
-            <img src={dbsLogo} alt="DBS platform logo" className="topbar-brand-logo" />
+            <img src={branding.logoSrc} alt={branding.logoAlt} className="topbar-brand-logo" />
             <div className="topbar-brand-copy">
-              <span>DBS Demo</span>
-              <strong>Insurer Dashboard</strong>
+              <span>{branding.companyName}</span>
+              <strong>{branding.appName}</strong>
             </div>
           </div>
           <span className="page-title">{activePage}</span>

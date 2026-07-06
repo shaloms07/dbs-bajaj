@@ -1,8 +1,4 @@
-import { useAuthStore } from '../store/authStore';
-import { apiFetch } from './apiClient';
-
-const DEFAULT_API_BASE_URL = 'https://api.dbscore.in/';
-const apiBaseUrl = (import.meta.env.VITE_DBS_API_BASE_URL || DEFAULT_API_BASE_URL).replace(/\/+$/, '');
+import { ApiErrorResponse, apiBaseUrl, apiFetch, clearSessionOnAuthError, getApiErrorMessage, parseJson } from './apiClient';
 
 export interface UsageBillingBucketItem {
   period_start: string;
@@ -35,11 +31,6 @@ export interface UsageBillingSummaryResponse {
   current_month: UsageBillingWindow;
   last_12_months: UsageBillingWindow;
 }
-
-type ApiErrorResponse = {
-  detail?: string;
-  message?: string;
-};
 
 function toNumber(value: unknown, fallback = 0) {
   if (typeof value === 'number' && Number.isFinite(value)) return value;
@@ -98,23 +89,11 @@ export async function fetchUsageBillingSummary(): Promise<UsageBillingSummaryRes
   const response = await apiFetch(`${apiBaseUrl}/dashboard/usage/summary`, {
     method: 'GET'
   });
-
-  const data = (await response.json().catch(() => null)) as UsageBillingSummaryResponse | ApiErrorResponse | null;
-
-  console.log('[Usage Billing API]', {
-    status: response.status,
-    response: data
-  });
+  const data = await parseJson<UsageBillingSummaryResponse | ApiErrorResponse>(response);
 
   if (!response.ok) {
-    if (response.status === 401) {
-      useAuthStore.getState().clearAuth();
-    }
-    const message =
-      (data && 'detail' in data && typeof data.detail === 'string' && data.detail) ||
-      (data && 'message' in data && typeof data.message === 'string' && data.message) ||
-      'Unable to fetch usage summary';
-    throw new Error(message);
+    clearSessionOnAuthError(response);
+    throw new Error(getApiErrorMessage(data, 'Unable to fetch usage summary'));
   }
 
   return mapUsageBillingSummaryResponse(data);

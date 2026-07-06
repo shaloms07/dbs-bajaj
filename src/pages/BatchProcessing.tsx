@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Papa, { ParseResult } from 'papaparse';
+import { useNavigate } from 'react-router-dom';
+import { useBranding } from '../branding/useBranding';
 import { submitBatch, BatchLookupResponse, BatchLookupResult } from '../services/batchService';
 import { ScoreBand } from '../types/score';
 import { bandFromScore } from '../utils/bandFromScore';
@@ -83,6 +85,8 @@ function extractVehicleNumbers(rows: ParsedCsvRow[]) {
 
 export default function BatchProcessing() {
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const branding = useBranding();
+  const navigate = useNavigate();
   const [fileName, setFileName] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -182,7 +186,7 @@ export default function BatchProcessing() {
         setLoading(true);
         setSubmittedCount(vehicleNumbers.length);
         setBatchResponse(null);
-        setStatusLabel('Processing on DBS API');
+        setStatusLabel(`Processing on ${branding.apiName}`);
         setProgressPercent(28);
 
         try {
@@ -219,13 +223,14 @@ export default function BatchProcessing() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = 'dbs_batch_template.csv';
+    link.download = `${branding.filePrefix}_batch_template.csv`;
     link.click();
     URL.revokeObjectURL(url);
   };
 
   const exportResults = () => {
     if (!filteredResults.length) return;
+    if (!window.confirm('Export these batch results? The file may contain sensitive vehicle and score data.')) return;
 
     const csv = Papa.unparse(
       filteredResults.map((row) => ({
@@ -235,7 +240,8 @@ export default function BatchProcessing() {
         score: row.score,
         risk_level: row.normalizedBand,
         premium_modifier_pct: row.premium_modifier_pct,
-        total_violations: row.total_violations
+        total_violations: row.total_violations,
+        exported_at: new Date().toISOString()
       }))
     );
 
@@ -243,13 +249,17 @@ export default function BatchProcessing() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = 'dbs_batch_results.csv';
+    link.download = `${branding.filePrefix}_batch_results.csv`;
     link.click();
     URL.revokeObjectURL(url);
   };
 
   const openVehicleLookup = (vehicleNumber: string) => {
-    window.open(`/lookup?regNo=${encodeURIComponent(normalizeVehicleNumber(vehicleNumber))}`, '_blank', 'noopener,noreferrer');
+    navigate('/lookup', {
+      state: {
+        regNo: normalizeVehicleNumber(vehicleNumber)
+      }
+    });
   };
 
   return (
@@ -367,7 +377,7 @@ export default function BatchProcessing() {
             <tr>
               <th>Registration No.</th>
               {/* <th>Vehicle Type</th> */}
-              <th>DBS</th>
+              <th>{branding.shortName}</th>
               <th>Band</th>
               <th>Violations</th>
               <th>Premium Modifier (%)</th>

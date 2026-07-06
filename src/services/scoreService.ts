@@ -1,10 +1,5 @@
-import { useAuthStore } from '../store/authStore';
-import { apiFetch } from './apiClient';
 import { ScoreBand, ScoreResult, Violation } from '../types/score';
-
-
-const DEFAULT_API_BASE_URL = 'https://api.dbscore.in/';
-const apiBaseUrl = (import.meta.env.VITE_DBS_API_BASE_URL || DEFAULT_API_BASE_URL).replace(/\/+$/, '');
+import { ApiErrorResponse, apiBaseUrl, apiFetch, clearSessionOnAuthError, getApiErrorMessage, parseJson } from './apiClient';
 
 interface LookupViolationResponse {
   challan_details?: string;
@@ -124,28 +119,22 @@ function pickStats(data: LookupResponse): LookupStatsResponse {
 export async function fetchScore(regNo: string, includeRc = false): Promise<ScoreResult> {
   const norm = regNo.toUpperCase().replace(/\s+/g, '');
 
-  const response = await apiFetch(`${apiBaseUrl}/dashboard/lookup/${encodeURIComponent(norm)}?include_rc=${includeRc ? 'true' : 'false'}`, {
-    method: 'GET'
-  });
+  if (!norm) {
+    throw new Error('Vehicle number is required');
+  }
 
-  const data = (await response.json().catch(() => null)) as LookupResponse | { detail?: string; message?: string } | null;
+  const response = await apiFetch(
+    `${apiBaseUrl}/dashboard/lookup/${encodeURIComponent(norm)}?include_rc=${includeRc ? 'true' : 'false'}`,
+    {
+      method: 'GET'
+    }
+  );
 
-  console.log('[Vehicle Lookup API]', {
-    regNo: norm,
-    includeRc,
-    status: response.status,
-    response: data
-  });
+  const data = await parseJson<LookupResponse | ApiErrorResponse>(response);
 
   if (!response.ok) {
-    if (response.status === 401) {
-      useAuthStore.getState().clearAuth();
-    }
-    const message =
-      (data && 'detail' in data && typeof data.detail === 'string' && data.detail) ||
-      (data && 'message' in data && typeof data.message === 'string' && data.message) ||
-      (response.status === 404 ? 'Vehicle not found' : 'Unable to fetch vehicle lookup');
-    throw new Error(message);
+    clearSessionOnAuthError(response);
+    throw new Error(getApiErrorMessage(data, response.status === 404 ? 'Vehicle not found' : 'Unable to fetch vehicle lookup'));
   }
 
   if (!data) {

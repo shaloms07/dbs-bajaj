@@ -9,6 +9,7 @@ import BatchProcessing from './pages/BatchProcessing';
 import UsageBilling from './pages/UsageBilling';
 import APIKeys from './pages/APIKeys';
 import APIDocs from './pages/APIDocs';
+import LandingPage from './pages/LandingPage';
 import VehicleTelemetry from './pages/VehicleTelemetry';
 import TM100Telemetry from './pages/TM100Telemetry';
 
@@ -24,7 +25,7 @@ export default function App() {
   return (
     <div>
       <Routes>
-        <Route path="/" element={<Navigate to="/login" replace />} />
+        <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<Login />} />
         <Route
           element={
@@ -42,8 +43,11 @@ export default function App() {
           <Route path="/api-keys" element={<APIKeys />} />
           <Route path="/api-docs" element={<APIDocs />} />
         </Route>
-        <Route path="*" element={<Navigate to="/login" replace />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </div>
   );
 }
+
+
+
