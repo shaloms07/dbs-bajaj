@@ -12,7 +12,7 @@ const pageTitles: Record<string, string> = {
   'api-keys': 'API Credentials',
   'api-docs': 'API Reference',
   telemetry: 'Vehicle Telemetry',
-  'tm100-telemetry': 'TM100 Telemetry'
+  'other-sources': 'Other Sources'
 };
 
 const navItemClass = ({ isActive }: { isActive: boolean }) => `nav-item ${isActive ? 'active' : ''}`;
@@ -37,15 +37,14 @@ export default function DashboardLayout() {
   return (
     <>
       <aside className="sidebar">
-        <div className="sidebar-logo" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <img src={branding.logoSrc} alt={branding.logoAlt} style={{ width: '70%', objectFit: 'contain' }} />
-          <div className="logo-sub" />
+        <div className="sidebar-logo">
+          <img src={branding.logoSrc} alt={branding.logoAlt} style={{ width: '80%', objectFit: 'contain' }} />
         </div>
 
         <div className="insurer-badge">
           <div className="label">Client</div>
           <div className="name">{branding.companyName}</div>
-          <div style={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: 11, marginTop: 4 }}>{accountLabel}</div>
+          <div style={{ color: 'rgba(255,255,255,0.65)', fontSize: 10, marginTop: 3 }}>{accountLabel}</div>
         </div>
 
         <nav className="nav">
@@ -61,10 +60,9 @@ export default function DashboardLayout() {
           <NavLink to="/usage-billing" className={navItemClass}>
             <svg className="icon" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
               <rect x="3" y="6" width="18" height="12" rx="2" />
-              <path d="M3 10h18" />
-              <path d="M16 13h2" />
+              <path d="M3 10h18M16 13h2" />
             </svg>
-            Usage & Consumption
+            Usage & Billing
           </NavLink>
 
           <div className="nav-section">Telemetry</div>
@@ -74,12 +72,12 @@ export default function DashboardLayout() {
             </svg>
             Vehicle Telemetry
           </NavLink>
-          <NavLink to="/tm100-telemetry" className={navItemClass}>
+          <NavLink to="/other-sources" className={navItemClass}>
             <svg className="icon" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-              <path d="M12 2a10 10 0 1 0 10 10" />
-              <path d="M12 6v6l4 2" />
+              <circle cx="12" cy="12" r="3" />
+              <path d="M12 2v3M12 19v3M4.22 4.22l2.12 2.12M17.66 17.66l2.12 2.12M2 12h3M19 12h3M4.22 19.78l2.12-2.12M17.66 6.34l2.12-2.12" />
             </svg>
-            TM100 Telemetry
+            Other Sources
           </NavLink>
 
           <div className="nav-section">Developer</div>
@@ -98,7 +96,7 @@ export default function DashboardLayout() {
         <div className="sidebar-footer">
           <div className="api-status">
             <div className="status-dot"></div>
-            {branding.apiName} · All systems operational
+            {branding.apiName} · Operational
           </div>
           <button onClick={logout} className="lookup-btn lookup-btn--danger" style={{ width: '100%', marginTop: 8 }}>
             Logout

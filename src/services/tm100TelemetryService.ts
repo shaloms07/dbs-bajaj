@@ -998,3 +998,11 @@ export function getTM100TelemetrySnapshot(vehicleNumber: string): TM100Telemetry
     summary
   };
 }
+
+export function getTM100Vehicles(): Array<{ vehicleNumber: string; customerId: string; label: string }> {
+  return Object.keys(TM100_RAW_FEEDS).map((key) => ({
+    vehicleNumber: key,
+    customerId: key,
+    label: key.replace(/_/g, ' ')
+  }));
+}

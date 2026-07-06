@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Bar, BarChart, Cell, Line, LineChart, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
-import { getTelemetryVehicles } from '../services/telemetryService';
-import { getTM100TelemetrySnapshot } from '../services/tm100TelemetryService';
+import { getTM100TelemetrySnapshot, getTM100Vehicles } from '../services/tm100TelemetryService';
 
 function formatKm(value: number) {
   return `${value.toLocaleString('en-IN', { maximumFractionDigits: 1 })} km`;
@@ -56,7 +55,7 @@ function SimpleTooltip({
 }
 
 export default function TM100Telemetry() {
-  const vehicles = useMemo(() => getTelemetryVehicles(), []);
+  const vehicles = useMemo(() => getTM100Vehicles(), []);
   const [vehicleNumber, setVehicleNumber] = useState(vehicles[0]?.vehicleNumber ?? '');
   const snapshot = useMemo(() => getTM100TelemetrySnapshot(vehicleNumber), [vehicleNumber]);
 
@@ -64,8 +63,8 @@ export default function TM100Telemetry() {
     <div className="telemetry-page">
       <div className="api-hero">
         <div>
-          <p className="api-eyebrow">Vehicle Telemetry</p>
-          <h1>Advanced telemetry insights dashboard</h1>
+          <p className="api-eyebrow">TM100 Analytics</p>
+          <h1>Vehicle Telemetry Dashboard</h1>
           <p className="api-lead">
             This page is structured for backend-analysed telemetry stats like day and night driving, terrain context, urban and rural usage,
             trips, speed behavior, and driving event summaries.
