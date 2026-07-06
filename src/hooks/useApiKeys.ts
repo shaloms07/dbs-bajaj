@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ApiKeyItem, CreateApiKeyResponse, createApiKey, deleteApiKey, fetchApiKeys, renameApiKey } from '../services/apiKeyService';
+import { ApiKeyItem, CreateApiKeyResponse, createApiKey, deleteApiKey, fetchApiKeys, renameApiKey, rotateApiKey } from '../services/apiKeyService';
 
 const apiKeysQueryKey = ['api-keys'] as const;
 
@@ -43,3 +43,15 @@ export function useDeleteApiKey() {
     }
   });
 }
+
+export function useRotateApiKey() {
+  const queryClient = useQueryClient();
+
+  return useMutation<CreateApiKeyResponse, Error, string>({
+    mutationFn: rotateApiKey,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: apiKeysQueryKey });
+    }
+  });
+}
+

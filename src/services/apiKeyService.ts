@@ -1,8 +1,12 @@
-import { useAuthStore } from '../store/authStore';
-import { apiFetch } from './apiClient';
-
-const DEFAULT_API_BASE_URL = 'https://api.dbscore.in/';
-const apiBaseUrl = (import.meta.env.VITE_DBS_API_BASE_URL || DEFAULT_API_BASE_URL).replace(/\/+$/, '');
+import {
+  ApiErrorResponse,
+  apiBaseUrl,
+  apiFetch,
+  clearSessionOnAuthError,
+  getApiErrorMessage,
+  parseApiError,
+  parseJson
+} from './apiClient';
 
 export interface ApiKeyItem {
   id: string;
@@ -11,6 +15,7 @@ export interface ApiKeyItem {
   is_active: boolean;
   created_at: string;
   last_used_at: string | null;
+  expires_at: string | null;
 }
 
 export interface CreateApiKeyResponse extends ApiKeyItem {
@@ -18,18 +23,31 @@ export interface CreateApiKeyResponse extends ApiKeyItem {
   warning: string;
 }
 
-type ApiErrorResponse = {
-  detail?: string;
-  message?: string;
-};
+function assertKeyId(keyId: string) {
+  if (!keyId.trim()) {
+    throw new Error('API key id is required');
+  }
+}
 
-async function parseError(response: Response, fallbackMessage: string) {
-  const data = (await response.json().catch(() => null)) as ApiErrorResponse | null;
+function normalizeKeyName(name: string) {
+  const trimmedName = name.trim();
+  if (!trimmedName) {
+    throw new Error('API key name is required');
+  }
+  return trimmedName;
+}
 
-  return (
-    (data && typeof data.detail === 'string' && data.detail) ||
-    (data && typeof data.message === 'string' && data.message) ||
-    fallbackMessage
+function isApiKeyItem(value: unknown): value is ApiKeyItem {
+  const item = value && typeof value === 'object' ? (value as Record<string, unknown>) : null;
+  return Boolean(
+    item &&
+      typeof item.id === 'string' &&
+      typeof item.name === 'string' &&
+      typeof item.key_prefix === 'string' &&
+      typeof item.is_active === 'boolean' &&
+      typeof item.created_at === 'string' &&
+      (typeof item.last_used_at === 'string' || item.last_used_at === null) &&
+      (typeof item.expires_at === 'string' || item.expires_at === null || item.expires_at === undefined)
   );
 }
 
@@ -38,19 +56,14 @@ export async function fetchApiKeys(): Promise<ApiKeyItem[]> {
     method: 'GET'
   });
 
-  const data = (await response.json().catch(() => null)) as ApiKeyItem[] | ApiErrorResponse | null;
+  const data = await parseJson<ApiKeyItem[] | ApiErrorResponse>(response);
 
   if (!response.ok) {
-    if (response.status === 401) {
-      useAuthStore.getState().clearAuth();
-    }
-    throw new Error(
-      (data && !Array.isArray(data) && ((typeof data.detail === 'string' && data.detail) || (typeof data.message === 'string' && data.message))) ||
-        'Unable to fetch API keys'
-    );
+    clearSessionOnAuthError(response);
+    throw new Error(getApiErrorMessage(data, 'Unable to fetch API keys'));
   }
 
-  if (!Array.isArray(data)) {
+  if (!Array.isArray(data) || !data.every(isApiKeyItem)) {
     throw new Error('API keys response is invalid');
   }
 
@@ -58,27 +71,23 @@ export async function fetchApiKeys(): Promise<ApiKeyItem[]> {
 }
 
 export async function createApiKey(name: string): Promise<CreateApiKeyResponse> {
+  const normalizedName = normalizeKeyName(name);
   const response = await apiFetch(`${apiBaseUrl}/auth/api-keys`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'
     },
-    body: JSON.stringify({ name })
+    body: JSON.stringify({ name: normalizedName })
   });
 
-  const data = (await response.json().catch(() => null)) as CreateApiKeyResponse | ApiErrorResponse | null;
+  const data = await parseJson<CreateApiKeyResponse | ApiErrorResponse>(response);
 
   if (!response.ok) {
-    if (response.status === 401) {
-      useAuthStore.getState().clearAuth();
-    }
-    throw new Error(
-      (data && !('raw_key' in data) && ((typeof data.detail === 'string' && data.detail) || (typeof data.message === 'string' && data.message))) ||
-        'Unable to create API key'
-    );
+    clearSessionOnAuthError(response);
+    throw new Error(getApiErrorMessage(data, 'Unable to create API key'));
   }
 
-  if (!data || !('raw_key' in data) || typeof data.raw_key !== 'string') {
+  if (!isApiKeyItem(data) || typeof data.raw_key !== 'string') {
     throw new Error('Create API key response is invalid');
   }
 
@@ -86,27 +95,25 @@ export async function createApiKey(name: string): Promise<CreateApiKeyResponse> 
 }
 
 export async function renameApiKey(keyId: string, name: string): Promise<ApiKeyItem> {
+  assertKeyId(keyId);
+  const normalizedName = normalizeKeyName(name);
+
   const response = await apiFetch(`${apiBaseUrl}/auth/api-keys/${encodeURIComponent(keyId)}`, {
     method: 'PATCH',
     headers: {
       'Content-Type': 'application/json'
     },
-    body: JSON.stringify({ name })
+    body: JSON.stringify({ name: normalizedName })
   });
 
-  const data = (await response.json().catch(() => null)) as ApiKeyItem | ApiErrorResponse | null;
+  const data = await parseJson<ApiKeyItem | ApiErrorResponse>(response);
 
   if (!response.ok) {
-    if (response.status === 401) {
-      useAuthStore.getState().clearAuth();
-    }
-    throw new Error(
-      (data && !('id' in data) && ((typeof data.detail === 'string' && data.detail) || (typeof data.message === 'string' && data.message))) ||
-        'Unable to rename API key'
-    );
+    clearSessionOnAuthError(response);
+    throw new Error(getApiErrorMessage(data, 'Unable to rename API key'));
   }
 
-  if (!data || !('id' in data) || typeof data.id !== 'string') {
+  if (!isApiKeyItem(data)) {
     throw new Error('Rename API key response is invalid');
   }
 
@@ -114,6 +121,8 @@ export async function renameApiKey(keyId: string, name: string): Promise<ApiKeyI
 }
 
 export async function deleteApiKey(keyId: string): Promise<void> {
+  assertKeyId(keyId);
+
   const response = await apiFetch(`${apiBaseUrl}/auth/api-keys/${encodeURIComponent(keyId)}`, {
     method: 'DELETE'
   });
@@ -123,9 +132,29 @@ export async function deleteApiKey(keyId: string): Promise<void> {
   }
 
   if (!response.ok) {
-    if (response.status === 401) {
-      useAuthStore.getState().clearAuth();
-    }
-    throw new Error(await parseError(response, 'Unable to revoke API key'));
+    clearSessionOnAuthError(response);
+    throw new Error(await parseApiError(response, 'Unable to revoke API key'));
   }
 }
+
+export async function rotateApiKey(keyId: string): Promise<CreateApiKeyResponse> {
+  assertKeyId(keyId);
+
+  const response = await apiFetch(`${apiBaseUrl}/auth/api-keys/${encodeURIComponent(keyId)}/rotate`, {
+    method: 'POST'
+  });
+
+  const data = await parseJson<CreateApiKeyResponse | ApiErrorResponse>(response);
+
+  if (!response.ok) {
+    clearSessionOnAuthError(response);
+    throw new Error(getApiErrorMessage(data, 'Unable to rotate API key'));
+  }
+
+  if (!isApiKeyItem(data) || typeof data.raw_key !== 'string') {
+    throw new Error('Rotate API key response is invalid');
+  }
+
+  return data;
+}
+
