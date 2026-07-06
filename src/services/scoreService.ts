@@ -1,8 +1,9 @@
 import { useAuthStore } from '../store/authStore';
-import { ensureValidAccessToken, isSessionExpiredError } from './authService';
+import { apiFetch } from './apiClient';
 import { ScoreBand, ScoreResult, Violation } from '../types/score';
 
-const DEFAULT_API_BASE_URL = 'https://citihubkiosk.com/dbs';
+
+const DEFAULT_API_BASE_URL = 'https://api.dbscore.in/';
 const apiBaseUrl = (import.meta.env.VITE_DBS_API_BASE_URL || DEFAULT_API_BASE_URL).replace(/\/+$/, '');
 
 interface LookupViolationResponse {
@@ -122,29 +123,10 @@ function pickStats(data: LookupResponse): LookupStatsResponse {
 
 export async function fetchScore(regNo: string, includeRc = false): Promise<ScoreResult> {
   const norm = regNo.toUpperCase().replace(/\s+/g, '');
-  let token = await ensureValidAccessToken();
 
-  const requestLookup = async (accessToken: string) =>
-    fetch(`${apiBaseUrl}/dashboard/lookup/${encodeURIComponent(norm)}?include_rc=${includeRc ? 'true' : 'false'}`, {
-      method: 'GET',
-      headers: {
-        Authorization: `Bearer ${accessToken}`
-      }
-    });
-
-  let response = await requestLookup(token);
-
-  if (response.status === 401) {
-    try {
-      token = await ensureValidAccessToken(true);
-      response = await requestLookup(token);
-    } catch (error) {
-      if (isSessionExpiredError(error)) {
-        throw new Error('Session expired. Please sign in again.');
-      }
-      throw error instanceof Error ? error : new Error('Unable to refresh session');
-    }
-  }
+  const response = await apiFetch(`${apiBaseUrl}/dashboard/lookup/${encodeURIComponent(norm)}?include_rc=${includeRc ? 'true' : 'false'}`, {
+    method: 'GET'
+  });
 
   const data = (await response.json().catch(() => null)) as LookupResponse | { detail?: string; message?: string } | null;
 

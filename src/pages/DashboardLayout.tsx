@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import dbsLogo from '../assets/dbs-logo.png';
 import { useAuthStore } from '../store/authStore';
-import { ensureValidAccessToken } from '../services/authService';
+import { apiFetch } from '../services/apiClient';
 
 const pageTitles: Record<string, string> = {
   lookup: 'Vehicle Lookup',
@@ -18,16 +18,15 @@ const navItemClass = ({ isActive }: { isActive: boolean }) =>
   `nav-item ${isActive ? 'active' : ''}`;
 
 export default function DashboardLayout() {
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const clearAuth = useAuthStore((s) => s.clearAuth);
   const user = useAuthStore((s) => s.user);
-  const token = useAuthStore((s) => s.token);
-  const refreshToken = useAuthStore((s) => s.refreshToken);
   const location = useLocation();
   const pathKey = location.pathname.split('/').filter(Boolean).at(-1) ?? 'lookup';
   const activePage = pageTitles[pathKey] ?? 'Vehicle Lookup';
 
   useEffect(() => {
-    if (!token || !refreshToken) {
+    if (!isAuthenticated) {
       return;
     }
 
@@ -35,7 +34,9 @@ export default function DashboardLayout() {
 
     const checkSession = async (reason: string) => {
       try {
-        await ensureValidAccessToken();
+        const DEFAULT_API_BASE_URL = 'https://api.dbscore.in/';
+        const apiBaseUrl = (import.meta.env.VITE_DBS_API_BASE_URL || DEFAULT_API_BASE_URL).replace(/\/+$/, '');
+        await apiFetch(`${apiBaseUrl}/auth/api-keys`);
       } catch (error) {
         if (!cancelled) {
           console.warn(`[auth] Background session check failed during ${reason}`, error);
@@ -68,7 +69,7 @@ export default function DashboardLayout() {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('focus', handleWindowFocus);
     };
-  }, [token, refreshToken]);
+  }, [isAuthenticated]);
 
   const logout = () => {
     clearAuth();

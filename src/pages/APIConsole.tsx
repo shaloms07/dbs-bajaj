@@ -9,7 +9,7 @@ const endpointDocs = [
     title: 'Get Score',
     description: 'Returns the DBS score, risk label, premium modifier, and core score summary for a vehicle.',
     auth: 'x-api-key',
-    params: ['Path: vehicle_number', 'Header: x-api-key', 'Base URL: https://citihubkiosk.com/dbs'],
+    params: ['Path: vehicle_number', 'Header: x-api-key', 'Base URL: https://api.dbscore.in/'],
     sampleVehicle: 'UP32AB1234'
   },
   {
@@ -238,7 +238,7 @@ export default function APIConsole() {
         <div className="api-hero-grid">
           <div className="api-hero-tile">
             <span>Base URL</span>
-            <strong>https://citihubkiosk.com/dbs</strong>
+            <strong>https://api.dbscore.in/</strong>
           </div>
           <div className="api-hero-tile">
             <span>Authentication</span>
