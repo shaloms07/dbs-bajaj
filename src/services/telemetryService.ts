@@ -439,7 +439,8 @@ async function fetchTrackmasterResponse(url: string) {
     method: 'GET',
     headers: {
       Accept: 'application/json, text/plain, */*'
-    }
+    },
+    credentials: 'include'
   });
 
   const text = await response.text();

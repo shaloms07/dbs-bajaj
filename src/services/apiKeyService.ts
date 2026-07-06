@@ -1,7 +1,7 @@
 import { useAuthStore } from '../store/authStore';
-import { ensureValidAccessToken, isSessionExpiredError } from './authService';
+import { apiFetch } from './apiClient';
 
-const DEFAULT_API_BASE_URL = 'https://citihubkiosk.com/dbs';
+const DEFAULT_API_BASE_URL = 'https://api.dbscore.in/';
 const apiBaseUrl = (import.meta.env.VITE_DBS_API_BASE_URL || DEFAULT_API_BASE_URL).replace(/\/+$/, '');
 
 export interface ApiKeyItem {
@@ -23,26 +23,6 @@ type ApiErrorResponse = {
   message?: string;
 };
 
-async function withAuthorizedRequest(execute: (token: string) => Promise<Response>) {
-  let token = await ensureValidAccessToken();
-
-  let response = await execute(token);
-
-  if (response.status === 401) {
-    try {
-      token = await ensureValidAccessToken(true);
-      response = await execute(token);
-    } catch (error) {
-      if (isSessionExpiredError(error)) {
-        throw new Error('Session expired. Please sign in again.');
-      }
-      throw error instanceof Error ? error : new Error('Unable to refresh session');
-    }
-  }
-
-  return response;
-}
-
 async function parseError(response: Response, fallbackMessage: string) {
   const data = (await response.json().catch(() => null)) as ApiErrorResponse | null;
 
@@ -54,14 +34,9 @@ async function parseError(response: Response, fallbackMessage: string) {
 }
 
 export async function fetchApiKeys(): Promise<ApiKeyItem[]> {
-  const response = await withAuthorizedRequest((token) =>
-    fetch(`${apiBaseUrl}/auth/api-keys`, {
-      method: 'GET',
-      headers: {
-        Authorization: `Bearer ${token}`
-      }
-    })
-  );
+  const response = await apiFetch(`${apiBaseUrl}/auth/api-keys`, {
+    method: 'GET'
+  });
 
   const data = (await response.json().catch(() => null)) as ApiKeyItem[] | ApiErrorResponse | null;
 
@@ -83,16 +58,13 @@ export async function fetchApiKeys(): Promise<ApiKeyItem[]> {
 }
 
 export async function createApiKey(name: string): Promise<CreateApiKeyResponse> {
-  const response = await withAuthorizedRequest((token) =>
-    fetch(`${apiBaseUrl}/auth/api-keys`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ name })
-    })
-  );
+  const response = await apiFetch(`${apiBaseUrl}/auth/api-keys`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ name })
+  });
 
   const data = (await response.json().catch(() => null)) as CreateApiKeyResponse | ApiErrorResponse | null;
 
@@ -114,16 +86,13 @@ export async function createApiKey(name: string): Promise<CreateApiKeyResponse> 
 }
 
 export async function renameApiKey(keyId: string, name: string): Promise<ApiKeyItem> {
-  const response = await withAuthorizedRequest((token) =>
-    fetch(`${apiBaseUrl}/auth/api-keys/${encodeURIComponent(keyId)}`, {
-      method: 'PATCH',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ name })
-    })
-  );
+  const response = await apiFetch(`${apiBaseUrl}/auth/api-keys/${encodeURIComponent(keyId)}`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ name })
+  });
 
   const data = (await response.json().catch(() => null)) as ApiKeyItem | ApiErrorResponse | null;
 
@@ -145,14 +114,9 @@ export async function renameApiKey(keyId: string, name: string): Promise<ApiKeyI
 }
 
 export async function deleteApiKey(keyId: string): Promise<void> {
-  const response = await withAuthorizedRequest((token) =>
-    fetch(`${apiBaseUrl}/auth/api-keys/${encodeURIComponent(keyId)}`, {
-      method: 'DELETE',
-      headers: {
-        Authorization: `Bearer ${token}`
-      }
-    })
-  );
+  const response = await apiFetch(`${apiBaseUrl}/auth/api-keys/${encodeURIComponent(keyId)}`, {
+    method: 'DELETE'
+  });
 
   if (response.status === 204) {
     return;

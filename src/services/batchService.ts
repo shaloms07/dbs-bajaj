@@ -1,7 +1,7 @@
 import { useAuthStore } from '../store/authStore';
-import { ensureValidAccessToken, isSessionExpiredError } from './authService';
+import { apiFetch } from './apiClient';
 
-const DEFAULT_API_BASE_URL = 'https://citihubkiosk.com/dbs';
+const DEFAULT_API_BASE_URL = 'https://api.dbscore.in/';
 const apiBaseUrl = (import.meta.env.VITE_DBS_API_BASE_URL || DEFAULT_API_BASE_URL).replace(/\/+$/, '');
 
 export interface BatchLookupResult {
@@ -20,35 +20,16 @@ export interface BatchLookupResponse {
   risk_category_counts: Record<string, number>;
 }
 
-async function requestBatchLookup(accessToken: string, vehicleNumbers: string[]) {
-  return fetch(`${apiBaseUrl}/dashboard/lookup/batch?include_rc=false`, {
+export async function submitBatch(vehicleNumbers: string[]): Promise<BatchLookupResponse> {
+  const response = await apiFetch(`${apiBaseUrl}/dashboard/lookup/batch?include_rc=false`, {
     method: 'POST',
     headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${accessToken}`
+      'Content-Type': 'application/json'
     },
     body: JSON.stringify({
       vehicle_numbers: vehicleNumbers
     })
   });
-}
-
-export async function submitBatch(vehicleNumbers: string[]): Promise<BatchLookupResponse> {
-  let token = await ensureValidAccessToken();
-
-  let response = await requestBatchLookup(token, vehicleNumbers);
-
-  if (response.status === 401) {
-    try {
-      token = await ensureValidAccessToken(true);
-      response = await requestBatchLookup(token, vehicleNumbers);
-    } catch (error) {
-      if (isSessionExpiredError(error)) {
-        throw new Error('Session expired. Please sign in again.');
-      }
-      throw error instanceof Error ? error : new Error('Unable to refresh session');
-    }
-  }
 
   const data = (await response.json().catch(() => null)) as
     | BatchLookupResponse

@@ -1,7 +1,7 @@
 import { useAuthStore } from '../store/authStore';
-import { ensureValidAccessToken, isSessionExpiredError } from './authService';
+import { apiFetch } from './apiClient';
 
-const DEFAULT_API_BASE_URL = 'https://citihubkiosk.com/dbs';
+const DEFAULT_API_BASE_URL = 'https://api.dbscore.in/';
 const apiBaseUrl = (import.meta.env.VITE_DBS_API_BASE_URL || DEFAULT_API_BASE_URL).replace(/\/+$/, '');
 
 export interface RecentVehicleItem {
@@ -24,31 +24,10 @@ function mapRecentVehicleItem(value: unknown): RecentVehicleItem {
   };
 }
 
-async function requestRecentVehicles(accessToken: string) {
-  return fetch(`${apiBaseUrl}/dashboard/usage/recent-vehicles`, {
-    method: 'GET',
-    headers: {
-      Authorization: `Bearer ${accessToken}`
-    }
-  });
-}
-
 export async function fetchRecentVehicles(): Promise<RecentVehicleItem[]> {
-  let token = await ensureValidAccessToken();
-
-  let response = await requestRecentVehicles(token);
-
-  if (response.status === 401) {
-    try {
-      token = await ensureValidAccessToken(true);
-      response = await requestRecentVehicles(token);
-    } catch (error) {
-      if (isSessionExpiredError(error)) {
-        throw new Error('Session expired. Please sign in again.');
-      }
-      throw error instanceof Error ? error : new Error('Unable to refresh session');
-    }
-  }
+  const response = await apiFetch(`${apiBaseUrl}/dashboard/usage/recent-vehicles`, {
+    method: 'GET'
+  });
 
   const data = (await response.json().catch(() => null)) as RecentVehicleItem[] | ApiErrorResponse | null;
 
