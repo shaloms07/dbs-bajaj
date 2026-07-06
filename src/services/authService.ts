@@ -58,3 +58,14 @@ export async function login(payload: LoginPayload): Promise<AuthSession> {
 
   return toAuthSession(data, payload.username);
 }
+
+export async function logout(): Promise<void> {
+  try {
+    await fetch(`${apiBaseUrl}/auth/logout`, {
+      method: 'POST',
+      credentials: 'include',
+    });
+  } catch {
+    // best-effort — proceed to clear local state even if the request fails
+  }
+}

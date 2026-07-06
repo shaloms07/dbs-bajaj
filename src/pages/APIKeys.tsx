@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useBranding } from '../branding/useBranding';
+
 import { useApiKeys, useCreateApiKey, useDeleteApiKey, useRenameApiKey, useRotateApiKey } from '../hooks/useApiKeys';
 import { ApiKeyItem, CreateApiKeyResponse } from '../services/apiKeyService';
 
@@ -30,7 +30,7 @@ function maskSecret(value: string) {
 }
 
 export default function APIKeys() {
-  const branding = useBranding();
+  const apiName = 'DBS API';
   const { data: apiKeys = [], isLoading, error } = useApiKeys();
   const createMutation = useCreateApiKey();
   const renameMutation = useRenameApiKey();
@@ -135,8 +135,8 @@ export default function APIKeys() {
   return (
     <div className="api-page">
       <section className="card api-hero-card" style={{ marginBottom: 0 }}>
-        <p className="api-eyebrow">{branding.apiName} Keys</p>
-        <h1>Manage your credentials for the {branding.apiName}</h1>
+        <p className="api-eyebrow">{apiName} Keys</p>
+        <h1>Manage your credentials for the {apiName}</h1>
         <p style={{ margin: '8px 0 0 0' }}>
           Generate, rotate, and manage secure credentials to query the vehicle scores and profiling endpoints directly.
         </p>

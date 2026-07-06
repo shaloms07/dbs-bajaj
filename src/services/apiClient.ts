@@ -1,7 +1,7 @@
 import { useAuthStore } from '../store/authStore';
 
-const DEFAULT_API_BASE_URL = 'https://api.dbscore.in/';
-const apiBaseUrl = (import.meta.env.VITE_DBS_API_BASE_URL || DEFAULT_API_BASE_URL).replace(/\/+$/, '');
+const DEFAULT_API_BASE_URL = 'https://api.dbscore.in';
+export const apiBaseUrl = (import.meta.env.VITE_DBS_API_BASE_URL || DEFAULT_API_BASE_URL).replace(/\/+$/, '');
 
 let isRefreshing = false;
 let failedQueue: Array<{
@@ -20,20 +20,47 @@ const processQueue = (error: Error | null) => {
   failedQueue = [];
 };
 
+export interface ApiErrorResponse {
+  detail?: string;
+  message?: string;
+}
+
 export interface ExtendedRequestInit extends RequestInit {
   _isRetry?: boolean;
+}
+
+export function getApiErrorMessage(data: unknown, fallback: string): string {
+  const d = data as ApiErrorResponse | null;
+  return (
+    (d && typeof d.detail === 'string' && d.detail) ||
+    (d && typeof d.message === 'string' && d.message) ||
+    fallback
+  );
+}
+
+export async function parseJson<T>(response: Response): Promise<T | null> {
+  return response.json().catch(() => null);
+}
+
+export async function parseApiError(response: Response, fallback: string): Promise<string> {
+  const data = await parseJson<ApiErrorResponse>(response);
+  return getApiErrorMessage(data, fallback);
+}
+
+export function clearSessionOnAuthError(response: Response): void {
+  if (response.status === 401) {
+    useAuthStore.getState().clearAuth();
+  }
 }
 
 export async function apiFetch(url: string, init?: ExtendedRequestInit): Promise<Response> {
   const { _isRetry, ...nativeInit } = init || {};
 
-  // Ensure credentials: "include" is set on every call
   const options: RequestInit = {
     ...nativeInit,
     credentials: 'include',
   };
 
-  // Remove Authorization header as we are now using HttpOnly cookies
   if (options.headers) {
     const headers = new Headers(options.headers);
     headers.delete('Authorization');
@@ -77,7 +104,6 @@ export async function apiFetch(url: string, init?: ExtendedRequestInit): Promise
         const error = new Error('Session expired');
         processQueue(error);
         useAuthStore.getState().clearAuth();
-        // Redirect to login page if we're in the browser
         if (typeof window !== 'undefined') {
           window.location.href = '/login';
         }
