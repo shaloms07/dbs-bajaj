@@ -74,9 +74,11 @@ export default function TM100Telemetry() {
 
   // Filter States
   const [isCustomRange, setIsCustomRange] = useState<boolean>(false);
-  const [rangePreset, setRangePreset] = useState<string>('last_30_days');
-  const [fromDate, setFromDate] = useState<string>('');
-  const [toDate, setToDate] = useState<string>('');
+  const [rangePreset, setRangePreset] = useState<string>('today');
+  const [fromDateInput, setFromDateInput] = useState<string>('');
+  const [toDateInput, setToDateInput] = useState<string>('');
+  const [appliedFromDate, setAppliedFromDate] = useState<string>('');
+  const [appliedToDate, setAppliedToDate] = useState<string>('');
 
   // Initial Load: Fetch Vehicles
   useEffect(() => {
@@ -108,8 +110,8 @@ export default function TM100Telemetry() {
         const statsPromise = fetchVehicleStats(
           selectedVehicle,
           isCustomRange ? undefined : rangePreset,
-          isCustomRange ? fromDate : undefined,
-          isCustomRange ? toDate : undefined
+          isCustomRange ? appliedFromDate : undefined,
+          isCustomRange ? appliedToDate : undefined
         );
         const tripsPromise = fetchVehicleTrips(selectedVehicle);
 
@@ -123,10 +125,10 @@ export default function TM100Telemetry() {
       }
     }
 
-    if (!isCustomRange || (fromDate && toDate)) {
+    if (!isCustomRange || (appliedFromDate && appliedToDate)) {
       loadTelemetryData();
     }
-  }, [selectedVehicle, isCustomRange, rangePreset, fromDate, toDate]);
+  }, [selectedVehicle, isCustomRange, rangePreset, appliedFromDate, appliedToDate]);
 
   // Derived charts dataset
   const speedTrendData = useMemo(() => {
@@ -198,13 +200,20 @@ export default function TM100Telemetry() {
 
   const handleCustomRangeSetup = () => {
     setIsCustomRange(true);
-    if (!fromDate || !toDate) {
-      const end = new Date();
-      const start = new Date();
-      start.setDate(end.getDate() - 30);
-      setFromDate(start.toISOString().split('T')[0]);
-      setToDate(end.toISOString().split('T')[0]);
+    setFromDateInput('');
+    setToDateInput('');
+    setAppliedFromDate('');
+    setAppliedToDate('');
+    setStats(null);
+  };
+
+  const handleApplyCustomRange = () => {
+    if (!fromDateInput || !toDateInput) {
+      alert('Please select both From and To dates.');
+      return;
     }
+    setAppliedFromDate(fromDateInput);
+    setAppliedToDate(toDateInput);
   };
 
   return (
@@ -276,25 +285,31 @@ export default function TM100Telemetry() {
           </div>
 
           {isCustomRange && (
-            <div className="flex gap-2 items-end">
+            <div className="flex gap-3 items-end">
               <label className="telemetry-filter-field">
                 <span>From</span>
                 <input
                   type="date"
-                  value={fromDate}
-                  onChange={(e) => setFromDate(e.target.value)}
-                  className="px-2 py-1 border border-gray-300 rounded"
+                  value={fromDateInput}
+                  onChange={(e) => setFromDateInput(e.target.value)}
+                  className="px-2 py-1.5 border border-gray-300 rounded text-sm bg-white"
                 />
               </label>
               <label className="telemetry-filter-field">
                 <span>To</span>
                 <input
                   type="date"
-                  value={toDate}
-                  onChange={(e) => setToDate(e.target.value)}
-                  className="px-2 py-1 border border-gray-300 rounded"
+                  value={toDateInput}
+                  onChange={(e) => setToDateInput(e.target.value)}
+                  className="px-2 py-1.5 border border-gray-300 rounded text-sm bg-white"
                 />
               </label>
+              <button
+                onClick={handleApplyCustomRange}
+                className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm h-[38px] flex items-center justify-center"
+              >
+                Apply
+              </button>
             </div>
           )}
         </div>
@@ -323,7 +338,17 @@ export default function TM100Telemetry() {
         </div>
       )}
 
-      {loading ? (
+      {isCustomRange && (!appliedFromDate || !appliedToDate) ? (
+        <div className="card text-center py-20 text-gray-500 font-medium">
+          <svg className="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+          </svg>
+          <p className="text-lg text-gray-700 font-semibold mb-1">Select Custom Date Range</p>
+          <p className="text-sm text-gray-500 max-w-sm mx-auto">
+            Please choose a start date and an end date above, then click <strong>Apply</strong> to load the vehicle's telemetry analytics.
+          </p>
+        </div>
+      ) : loading ? (
         <div className="flex justify-center items-center py-20">
           <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-blue-500"></div>
           <span className="ml-3 text-gray-500 font-medium">Fetching telemetry data...</span>
