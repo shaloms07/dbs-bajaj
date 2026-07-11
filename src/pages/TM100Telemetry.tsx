@@ -377,70 +377,68 @@ export default function TM100Telemetry() {
 
           <section className="telemetry-kpi-grid">
             <div className="card telemetry-kpi-card">
-              <div className="telemetry-summary-label">Total Distance Driven</div>
+              <div className="telemetry-summary-label">Distance & Activity</div>
               <div className="telemetry-summary-value-row">
                 <div className="telemetry-summary-value">{formatKm(stats.distance.total_km)}</div>
                 <div className="telemetry-summary-average">{stats.trips_included} trips</div>
               </div>
-              <div className="telemetry-summary-note">Overall distance driven in the selected range</div>
-            </div>
-
-            <div className="card telemetry-kpi-card">
-              <div className="telemetry-summary-label">Day Driving</div>
-              <div className="telemetry-summary-value-row">
-                <div className="telemetry-summary-value">{formatKm(stats.distance.day_km)}</div>
-                <div className="telemetry-summary-average">
-                  {(100 - stats.distance.night_pct).toFixed(1)}%
-                </div>
+              <div className="telemetry-summary-note">
+                Day: {formatKm(stats.distance.day_km)} · Night: {formatKm(stats.distance.night_km)} ({stats.distance.night_pct.toFixed(0)}%)
               </div>
-              <div className="telemetry-summary-note">Distance driven during daytime hours</div>
             </div>
 
             <div className="card telemetry-kpi-card">
-              <div className="telemetry-summary-label">Night Driving</div>
-              <div className="telemetry-summary-value-row">
-                <div className="telemetry-summary-value">{formatKm(stats.distance.night_km)}</div>
-                <div className="telemetry-summary-average">
-                  {stats.distance.night_pct.toFixed(1)}%
-                </div>
-              </div>
-              <div className="telemetry-summary-note">Distance driven during nighttime (10 PM - 6 AM)</div>
-            </div>
-
-            <div className="card telemetry-kpi-card">
-              <div className="telemetry-summary-label">Average Speed</div>
+              <div className="telemetry-summary-label">Average Speed & Time</div>
               <div className="telemetry-summary-value-row">
                 <div className="telemetry-summary-value">{stats.speed.avg_kmph.toFixed(1)} km/h</div>
                 <div className="telemetry-summary-average">{formatDuration(stats.duration.total_seconds)}</div>
               </div>
-              <div className="telemetry-summary-note">Overall average speed and total wheel duration</div>
+              <div className="telemetry-summary-note">Overall average speed and total driving time</div>
             </div>
 
             <div className="card telemetry-kpi-card">
-              <div className="telemetry-summary-label">Top Speed</div>
+              <div className="telemetry-summary-label">Harsh Accelerations</div>
               <div className="telemetry-summary-value-row">
-                <div className="telemetry-summary-value">{stats.speed.max_kmph.toFixed(1)} km/h</div>
-                <div className="telemetry-summary-average">{stats.safety.overspeeding_count} alerts</div>
+                <div className="telemetry-summary-value">{stats.safety.harsh_acceleration}</div>
+                <div className="telemetry-summary-average">events</div>
               </div>
-              <div className="telemetry-summary-note">Peak speed and counts exceeding limit thresholds</div>
+              <div className="telemetry-summary-note">Sudden vehicle speed increases logged</div>
             </div>
 
             <div className="card telemetry-kpi-card">
-              <div className="telemetry-summary-label">Harsh Driving Events</div>
+              <div className="telemetry-summary-label">Harsh Brakings</div>
+              <div className="telemetry-summary-value-row">
+                <div className="telemetry-summary-value">{stats.safety.harsh_braking}</div>
+                <div className="telemetry-summary-average">events</div>
+              </div>
+              <div className="telemetry-summary-note">Sudden hard braking triggers logged</div>
+            </div>
+
+            <div className="card telemetry-kpi-card">
+              <div className="telemetry-summary-label">Harsh Turnings</div>
+              <div className="telemetry-summary-value-row">
+                <div className="telemetry-summary-value">{stats.safety.harsh_turning}</div>
+                <div className="telemetry-summary-average">events</div>
+              </div>
+              <div className="telemetry-summary-note">Aggressive cornering / lateral force events</div>
+            </div>
+
+            <div className="card telemetry-kpi-card">
+              <div className="telemetry-summary-label">Overspeeding Events</div>
+              <div className="telemetry-summary-value-row">
+                <div className="telemetry-summary-value">{stats.safety.overspeeding_count}</div>
+                <div className="telemetry-summary-average">{stats.speed.max_kmph.toFixed(1)} km/h max</div>
+              </div>
+              <div className="telemetry-summary-note">Counts exceeding speed limit thresholds</div>
+            </div>
+
+            <div className="card telemetry-kpi-card">
+              <div className="telemetry-summary-label">Total Harsh Events</div>
               <div className="telemetry-summary-value-row">
                 <div className="telemetry-summary-value">{stats.safety.total_harsh_events}</div>
                 <div className="telemetry-summary-average">{stats.safety.harsh_events_per_100km.toFixed(1)} / 100km</div>
               </div>
-              <div className="telemetry-summary-note">Total alerts and density per 100 km driven</div>
-            </div>
-
-            <div className="card telemetry-kpi-card">
-              <div className="telemetry-summary-label">Longest Trip</div>
-              <div className="telemetry-summary-value-row">
-                <div className="telemetry-summary-value">{formatKm(stats.distance.longest_trip_km)}</div>
-                <div className="telemetry-summary-average">{formatDuration(stats.duration.longest_trip_seconds)}</div>
-              </div>
-              <div className="telemetry-summary-note">Maximum distance logged in a single closed session</div>
+              <div className="telemetry-summary-note">Aggregate driving violations and density</div>
             </div>
 
             <div className="card telemetry-kpi-card">
