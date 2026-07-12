@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
-import { Bar, BarChart, Cell, Line, LineChart, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { useEffect, useState } from 'react';
+
 import {
   fetchTelematicsVehicles,
   fetchVehicleStats,
@@ -35,33 +35,8 @@ function formatDateTime(value: string | null) {
   });
 }
 
-function formatCoordinate(latitude: number | null, longitude: number | null) {
-  return latitude != null && longitude != null ? `${latitude.toFixed(5)}, ${longitude.toFixed(5)}` : 'N/A';
-}
 
-function SimpleTooltip({
-  active,
-  payload,
-  label
-}: {
-  active?: boolean;
-  payload?: Array<{ name: string; value: number }>;
-  label?: string;
-}) {
-  if (!active || !payload?.length) return null;
 
-  return (
-    <div className="telemetry-tooltip">
-      <div className="telemetry-tooltip-label">{label}</div>
-      {payload.map((entry) => (
-        <div key={entry.name} className="telemetry-tooltip-row">
-          <span>{entry.name}</span>
-          <strong>{typeof entry.value === 'number' ? entry.value.toFixed(1) : entry.value}</strong>
-        </div>
-      ))}
-    </div>
-  );
-}
 
 export default function TM100Telemetry() {
   const [vehicles, setVehicles] = useState<TelematicsDevice[]>([]);
@@ -130,68 +105,7 @@ export default function TM100Telemetry() {
     }
   }, [selectedVehicle, isCustomRange, rangePreset, appliedFromDate, appliedToDate]);
 
-  // Derived charts dataset
-  const speedTrendData = useMemo(() => {
-    if (!trips?.recent_trips || trips.recent_trips.length === 0) return [];
-    return [...trips.recent_trips]
-      .reverse()
-      .map((t, idx) => ({
-        label: t.started_at ? new Date(t.started_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }) : `Trip ${idx + 1}`,
-        'Avg Speed': t.avg_speed_kmph ?? 0,
-        'Max Speed': t.max_speed_kmph ?? 0
-      }));
-  }, [trips]);
 
-  const distanceTrendData = useMemo(() => {
-    if (!trips?.recent_trips || trips.recent_trips.length === 0) return [];
-    return [...trips.recent_trips]
-      .reverse()
-      .map((t, idx) => ({
-        label: t.started_at ? new Date(t.started_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }) : `Trip ${idx + 1}`,
-        'Distance (km)': t.total_distance_km ?? 0
-      }));
-  }, [trips]);
-
-  const dayNightMixData = useMemo(() => {
-    if (!stats) return [];
-    return [
-      { name: 'Day Driving', value: stats.distance.day_km, color: '#0b8666' },
-      { name: 'Night Driving', value: stats.distance.night_km, color: '#d29b00' }
-    ];
-  }, [stats]);
-
-  const safetyMixData = useMemo(() => {
-    if (!stats) return [];
-    const items = [
-      { name: 'Harsh Accel', value: stats.safety.harsh_acceleration, color: '#c92a2a' },
-      { name: 'Harsh Braking', value: stats.safety.harsh_braking, color: '#d29b00' },
-      { name: 'Harsh Turning', value: stats.safety.harsh_turning, color: '#005dac' },
-      { name: 'Overspeeding', value: stats.safety.overspeeding_count, color: '#7c3aed' }
-    ];
-    return items.filter((item) => item.value > 0);
-  }, [stats]);
-
-  const insights = useMemo(() => {
-    if (!stats) return [];
-    const list: string[] = [];
-    list.push(`Vehicle stats reflect ${stats.trips_included} completed trips covering a total of ${stats.distance.total_km.toFixed(1)} km.`);
-    if (stats.distance.night_pct > 15) {
-      list.push(`Night driving ratio is elevated at ${stats.distance.night_pct.toFixed(1)}%. Night driving increases risk exposure.`);
-    } else {
-      list.push(`Night driving ratio is within a low risk profile (${stats.distance.night_pct.toFixed(1)}%).`);
-    }
-    if (stats.safety.harsh_events_per_100km > 5) {
-      list.push(`Harsh event density is high at ${stats.safety.harsh_events_per_100km.toFixed(1)} events per 100km. Driver coaching is recommended.`);
-    } else {
-      list.push(`Harsh event density is low (${stats.safety.harsh_events_per_100km.toFixed(1)}/100km), indicating safe, smooth driving behavior.`);
-    }
-    if (stats.safety.overspeeding_count > 0) {
-      list.push(`Overspeeding was triggered ${stats.safety.overspeeding_count} times, with a peak speed of ${stats.speed.max_kmph.toFixed(1)} km/h.`);
-    } else {
-      list.push(`Excellent speed compliance: zero overspeeding alerts recorded.`);
-    }
-    return list;
-  }, [stats]);
 
   const handlePresetChange = (preset: string) => {
     setIsCustomRange(false);
@@ -370,32 +284,67 @@ export default function TM100Telemetry() {
                 </span>
               </div>
               <div className="text-sm text-gray-700 bg-white px-3 py-1.5 rounded border border-rose-100 shadow-sm">
-                <strong>Start Coordinates:</strong> {formatCoordinate(trips.active_trip.start_lat, trips.active_trip.start_lon)}
+                <strong>Trip ID:</strong> <span className="font-mono">{trips.active_trip.id}</span>
               </div>
             </div>
           )}
 
+          {/* Distance Group */}
+          <div className="telemetry-group-label">Distance</div>
           <section className="telemetry-kpi-grid">
             <div className="card telemetry-kpi-card">
-              <div className="telemetry-summary-label">Distance & Activity</div>
+              <div className="telemetry-summary-label">Total Distance</div>
               <div className="telemetry-summary-value-row">
                 <div className="telemetry-summary-value">{formatKm(stats.distance.total_km)}</div>
                 <div className="telemetry-summary-average">{stats.trips_included} trips</div>
               </div>
               <div className="telemetry-summary-note">
-                Day: {formatKm(stats.distance.day_km)} · Night: {formatKm(stats.distance.night_km)} ({stats.distance.night_pct.toFixed(0)}%)
+                Avg {formatKm(stats.distance.avg_per_trip_km)} / trip · Longest {formatKm(stats.distance.longest_trip_km)}
               </div>
             </div>
 
             <div className="card telemetry-kpi-card">
-              <div className="telemetry-summary-label">Average Speed & Time</div>
+              <div className="telemetry-summary-label">Day Driving</div>
               <div className="telemetry-summary-value-row">
-                <div className="telemetry-summary-value">{stats.speed.avg_kmph.toFixed(1)} km/h</div>
-                <div className="telemetry-summary-average">{formatDuration(stats.duration.total_seconds)}</div>
+                <div className="telemetry-summary-value">{formatKm(stats.distance.day_km)}</div>
+                <div className="telemetry-summary-average">{formatDuration(stats.duration.day_seconds)}</div>
               </div>
-              <div className="telemetry-summary-note">Overall average speed and total driving time</div>
+              <div className="telemetry-summary-note">Distance and duration during daytime hours</div>
             </div>
 
+            <div className="card telemetry-kpi-card">
+              <div className="telemetry-summary-label">Night Driving</div>
+              <div className="telemetry-summary-value-row">
+                <div className="telemetry-summary-value">{formatKm(stats.distance.night_km)}</div>
+                <div className="telemetry-summary-average">{formatDuration(stats.duration.night_seconds)}</div>
+              </div>
+              <div className="telemetry-summary-note">{stats.distance.night_pct.toFixed(1)}% of total distance</div>
+            </div>
+          </section>
+
+          {/* Speed Group */}
+          <div className="telemetry-group-label">Speed</div>
+          <section className="telemetry-kpi-grid">
+            <div className="card telemetry-kpi-card">
+              <div className="telemetry-summary-label">Max Speed</div>
+              <div className="telemetry-summary-value-row">
+                <div className="telemetry-summary-value">{stats.speed.max_kmph.toFixed(1)} km/h</div>
+              </div>
+              <div className="telemetry-summary-note">Peak speed recorded in the selected period</div>
+            </div>
+
+            <div className="card telemetry-kpi-card">
+              <div className="telemetry-summary-label">Average Speed</div>
+              <div className="telemetry-summary-value-row">
+                <div className="telemetry-summary-value">{stats.speed.avg_kmph.toFixed(1)} km/h</div>
+              </div>
+              <div className="telemetry-summary-note">Overall average across all completed trips</div>
+            </div>
+          </section>
+
+          {/* Harsh Events Group */}
+          <div className="telemetry-group-label">Harsh Events</div>
+          <section className="telemetry-kpi-grid">
             <div className="card telemetry-kpi-card">
               <div className="telemetry-summary-label">Harsh Accelerations</div>
               <div className="telemetry-summary-value-row">
@@ -427,7 +376,7 @@ export default function TM100Telemetry() {
               <div className="telemetry-summary-label">Overspeeding Events</div>
               <div className="telemetry-summary-value-row">
                 <div className="telemetry-summary-value">{stats.safety.overspeeding_count}</div>
-                <div className="telemetry-summary-average">{stats.speed.max_kmph.toFixed(1)} km/h max</div>
+                <div className="telemetry-summary-average">events</div>
               </div>
               <div className="telemetry-summary-note">Counts exceeding speed limit thresholds</div>
             </div>
@@ -438,170 +387,11 @@ export default function TM100Telemetry() {
                 <div className="telemetry-summary-value">{stats.safety.total_harsh_events}</div>
                 <div className="telemetry-summary-average">{stats.safety.harsh_events_per_100km.toFixed(1)} / 100km</div>
               </div>
-              <div className="telemetry-summary-note">Aggregate driving violations and density</div>
-            </div>
-
-            <div className="card telemetry-kpi-card">
-              <div className="telemetry-summary-label">Risk Profile Status</div>
-              <div className="telemetry-summary-value-row">
-                <div className={`telemetry-summary-value text-sm font-semibold inline-block px-3 py-1 rounded ${
-                  stats.safety.harsh_events_per_100km > 8
-                    ? 'bg-red-100 text-red-800'
-                    : stats.safety.harsh_events_per_100km > 4
-                      ? 'bg-yellow-100 text-yellow-800'
-                      : 'bg-green-100 text-green-800'
-                }`}>
-                  {stats.safety.harsh_events_per_100km > 8 ? 'High Risk' : stats.safety.harsh_events_per_100km > 4 ? 'Moderate' : 'Low Risk'}
-                </div>
-                <div className="telemetry-summary-average">calculated</div>
-              </div>
-              <div className="telemetry-summary-note">Overall risk class assessment from telemetry</div>
+              <div className="telemetry-summary-note">Aggregate violations and event density</div>
             </div>
           </section>
 
-          <section className="telemetry-insights-grid">
-            {insights.map((insight, idx) => (
-              <div key={idx} className="card telemetry-insight-card">
-                <div className="telemetry-summary-label">Telemetry Insight</div>
-                <p>{insight}</p>
-              </div>
-            ))}
-          </section>
 
-          <section className="telemetry-panel-grid">
-            <div className="card telemetry-panel">
-              <div className="telemetry-panel-head">
-                <div>
-                  <div className="card-title">Speed Trend (Per Trip)</div>
-                  <div className="telemetry-panel-subtitle">Average and Maximum speeds across recent closed trips</div>
-                </div>
-              </div>
-              <div className="telemetry-chart-wrap">
-                {speedTrendData.length ? (
-                  <ResponsiveContainer width="100%" height={220}>
-                    <LineChart data={speedTrendData}>
-                      <XAxis dataKey="label" tickLine={false} axisLine={false} />
-                      <YAxis tickLine={false} axisLine={false} width={42} />
-                      <Tooltip content={<SimpleTooltip />} />
-                      <Line type="monotone" dataKey="Avg Speed" stroke="#005dac" strokeWidth={2.5} dot={{ r: 3 }} />
-                      <Line type="monotone" dataKey="Max Speed" stroke="#c92a2a" strokeWidth={1.5} strokeDasharray="3 3" dot={{ r: 3 }} />
-                    </LineChart>
-                  </ResponsiveContainer>
-                ) : (
-                  <div className="telemetry-empty-state py-16">No trip trend data available.</div>
-                )}
-              </div>
-            </div>
-
-            <div className="card telemetry-panel">
-              <div className="telemetry-panel-head">
-                <div>
-                  <div className="card-title">Distance Trend (Per Trip)</div>
-                  <div className="telemetry-panel-subtitle">Distance driven across recent closed trips</div>
-                </div>
-              </div>
-              <div className="telemetry-chart-wrap">
-                {distanceTrendData.length ? (
-                  <ResponsiveContainer width="100%" height={220}>
-                    <BarChart data={distanceTrendData}>
-                      <XAxis dataKey="label" tickLine={false} axisLine={false} />
-                      <YAxis tickLine={false} axisLine={false} width={42} />
-                      <Tooltip content={<SimpleTooltip />} />
-                      <Bar dataKey="Distance (km)" radius={[6, 6, 0, 0]} fill="#0b8666" />
-                    </BarChart>
-                  </ResponsiveContainer>
-                ) : (
-                  <div className="telemetry-empty-state py-16">No trip trend data available.</div>
-                )}
-              </div>
-            </div>
-          </section>
-
-          <section className="telemetry-panel-grid">
-            <div className="card telemetry-panel">
-              <div className="telemetry-panel-head">
-                <div>
-                  <div className="card-title">Day vs Night Split</div>
-                  <div className="telemetry-panel-subtitle">Distance distribution based on daylight and night hours</div>
-                </div>
-              </div>
-              <div className="telemetry-chart-two-up">
-                <div className="telemetry-chart-wrap">
-                  {stats.distance.total_km > 0 ? (
-                    <ResponsiveContainer width="100%" height={220}>
-                      <PieChart>
-                        <Pie data={dayNightMixData} dataKey="value" nameKey="name" innerRadius={56} outerRadius={82} paddingAngle={3}>
-                          {dayNightMixData.map((entry) => (
-                            <Cell key={entry.name} fill={entry.color} />
-                          ))}
-                        </Pie>
-                        <Tooltip content={<SimpleTooltip />} />
-                      </PieChart>
-                    </ResponsiveContainer>
-                  ) : (
-                    <div className="telemetry-empty-state py-16">No distance recorded.</div>
-                  )}
-                </div>
-                <div className="telemetry-side-metrics">
-                  {dayNightMixData.map((entry) => (
-                    <div key={entry.name} className="telemetry-side-metric">
-                      <span>{entry.name}</span>
-                      <strong>{formatKm(entry.value)}</strong>
-                      <small>
-                        {stats.distance.total_km > 0
-                          ? `${((entry.value / stats.distance.total_km) * 100).toFixed(1)}% of distance`
-                          : '0% of distance'}
-                      </small>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            <div className="card telemetry-panel">
-              <div className="telemetry-panel-head">
-                <div>
-                  <div className="card-title">Safety Events Breakdown</div>
-                  <div className="telemetry-panel-subtitle">Distribution of logged alert and behavior violations</div>
-                </div>
-              </div>
-              <div className="telemetry-chart-two-up">
-                <div className="telemetry-chart-wrap">
-                  {safetyMixData.length ? (
-                    <ResponsiveContainer width="100%" height={220}>
-                      <PieChart>
-                        <Pie data={safetyMixData} dataKey="value" nameKey="name" innerRadius={56} outerRadius={82} paddingAngle={3}>
-                          {safetyMixData.map((entry) => (
-                            <Cell key={entry.name} fill={entry.color} />
-                          ))}
-                        </Pie>
-                        <Tooltip content={<SimpleTooltip />} />
-                      </PieChart>
-                    </ResponsiveContainer>
-                  ) : (
-                    <div className="telemetry-empty-state py-16">No harsh behavior events recorded.</div>
-                  )}
-                </div>
-                <div className="telemetry-side-metrics">
-                  {safetyMixData.length ? (
-                    safetyMixData.map((entry) => (
-                      <div key={entry.name} className="telemetry-side-metric">
-                        <span>{entry.name}</span>
-                        <strong>{entry.value} events</strong>
-                        <small>
-                          {stats.safety.total_harsh_events > 0
-                            ? `${((entry.value / stats.safety.total_harsh_events) * 100).toFixed(1)}% of total`
-                            : '0%'}
-                        </small>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="text-sm text-gray-500 font-medium mt-4">Smooth driving! No alert logs.</div>
-                  )}
-                </div>
-              </div>
-            </div>
-          </section>
 
           <section className="card telemetry-panel mb-8">
             <div className="telemetry-panel-head">
@@ -614,35 +404,29 @@ export default function TM100Telemetry() {
               <table className="usage-billing-table telemetry-table">
                 <thead>
                   <tr>
-                    <th>Trip ID</th>
                     <th>Start Time</th>
                     <th>End Time</th>
                     <th>Duration</th>
                     <th>Distance</th>
                     <th>Avg Speed</th>
                     <th>Max Speed</th>
-                    <th>Start Coords</th>
-                    <th>End Coords</th>
                   </tr>
                 </thead>
                 <tbody>
                   {trips?.recent_trips.length ? (
                     trips.recent_trips.map((trip) => (
                       <tr key={trip.id}>
-                        <td className="font-mono text-xs max-w-[120px] truncate">{trip.id}</td>
                         <td>{formatDateTime(trip.started_at)}</td>
                         <td>{formatDateTime(trip.ended_at)}</td>
                         <td>{formatDuration(trip.total_duration_seconds)}</td>
                         <td>{formatKm(trip.total_distance_km)}</td>
                         <td>{trip.avg_speed_kmph != null ? `${trip.avg_speed_kmph.toFixed(1)} km/h` : 'N/A'}</td>
                         <td>{trip.max_speed_kmph != null ? `${trip.max_speed_kmph.toFixed(1)} km/h` : 'N/A'}</td>
-                        <td className="font-mono text-xs">{formatCoordinate(trip.start_lat, trip.start_lon)}</td>
-                        <td className="font-mono text-xs">{formatCoordinate(trip.end_lat, trip.end_lon)}</td>
                       </tr>
                     ))
                   ) : (
                     <tr>
-                      <td colSpan={9}>
+                      <td colSpan={6}>
                         <div className="telemetry-empty-state py-8">No closed trip records returned for this vehicle.</div>
                       </td>
                     </tr>
