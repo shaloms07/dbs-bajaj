@@ -35,6 +35,17 @@ function formatDateTime(value: string | null) {
   });
 }
 
+function formatElapsed(startedAt: string | null): string {
+  if (!startedAt) return 'N/A';
+  const diffMs = Date.now() - new Date(startedAt).getTime();
+  if (diffMs < 0) return 'N/A';
+  const totalMinutes = Math.floor(diffMs / 60000);
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  if (hours > 0) return `${hours}h ${minutes}m`;
+  return `${minutes} min`;
+}
+
 
 
 
@@ -252,6 +263,26 @@ export default function TM100Telemetry() {
         </div>
       )}
 
+      {/* Active Trip banner — always visible when a trip is in progress, regardless of stats */}
+      {trips?.active_trip && (
+        <div className="active-trip-banner">
+          <div className="active-trip-pulse">
+            <span className="active-trip-dot" />
+            LIVE TRIP IN PROGRESS
+          </div>
+          <div className="active-trip-body">
+            <div className="active-trip-row">
+              <span className="active-trip-label">Started</span>
+              <span className="active-trip-value">{formatDateTime(trips.active_trip.started_at)}</span>
+            </div>
+            <div className="active-trip-row">
+              <span className="active-trip-label">Elapsed</span>
+              <span className="active-trip-value">{formatElapsed(trips.active_trip.started_at)}</span>
+            </div>
+          </div>
+        </div>
+      )}
+
       {isCustomRange && (!appliedFromDate || !appliedToDate) ? (
         <div className="card text-center py-20 text-gray-500 font-medium">
           <svg className="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -269,27 +300,6 @@ export default function TM100Telemetry() {
         </div>
       ) : stats ? (
         <>
-          {/* Active Trip spotlight */}
-          {trips?.active_trip && (
-            <div className="card border-l-4 border-rose-500 bg-rose-50/20 p-4 mb-6 rounded-lg flex flex-col md:flex-row justify-between items-start md:items-center gap-4 shadow-sm">
-              <div className="flex flex-col gap-1">
-                <div className="flex items-center gap-2">
-                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-rose-100 text-rose-800 animate-pulse">
-                    LIVE TRIP IN PROGRESS
-                  </span>
-                  <span className="font-semibold text-rose-900">Vehicle is currently on the road</span>
-                </div>
-                <span className="text-sm text-gray-600 mt-1">
-                  Trip started at <strong>{formatDateTime(trips.active_trip.started_at)}</strong>
-                </span>
-              </div>
-              <div className="text-sm text-gray-700 bg-white px-3 py-1.5 rounded border border-rose-100 shadow-sm">
-                <strong>Trip ID:</strong> <span className="font-mono">{trips.active_trip.id}</span>
-              </div>
-            </div>
-          )}
-
-          {/* Distance Group */}
           <div className="telemetry-group-label">Distance</div>
           <section className="telemetry-kpi-grid">
             <div className="card telemetry-kpi-card">

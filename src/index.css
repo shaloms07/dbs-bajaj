@@ -5408,6 +5408,75 @@ tbody td {
   line-height: 1.4;
 }
 
+/* ── Active Trip Banner ────────────────────────────────────── */
+.active-trip-banner {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  background: linear-gradient(135deg, #fff1f2 0%, #ffe4e6 100%);
+  border: 1.5px solid #fecdd3;
+  border-left: 4px solid #e11d48;
+  border-radius: 10px;
+  padding: 14px 20px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 8px rgba(225, 29, 72, 0.08);
+}
+
+.active-trip-pulse {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #be123c;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.active-trip-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #e11d48;
+  animation: active-trip-ping 1.4s ease-in-out infinite;
+}
+
+@keyframes active-trip-ping {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.4; transform: scale(1.35); }
+}
+
+.active-trip-body {
+  display: flex;
+  gap: 28px;
+  flex-wrap: wrap;
+}
+
+.active-trip-row {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.active-trip-label {
+  font-size: 0.68rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #9f1239;
+  opacity: 0.75;
+}
+
+.active-trip-value {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #881337;
+}
+/* ─────────────────────────────────────────────────────────── */
+
 .telemetry-group-label {
   font-size: 0.7rem;
   font-weight: 700;
