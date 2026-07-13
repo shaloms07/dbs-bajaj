@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useBranding } from '../branding/useBranding';
 import { useApiKeys } from '../hooks/useApiKeys';
+import { apiBaseUrl } from '../services/apiClient';
 
 // Mock Response Payloads
 const SCORE_SUCCESS_MOCK = {
@@ -100,7 +101,7 @@ export default function APIDocs() {
 
   // Generate dynamic snippet codes
   const scoreSnippetCode = useMemo(() => {
-    const url = `https://api.dbscore.in/api/v1/score/UP32AB1234`;
+    const url = `${apiBaseUrl}/api/v1/score/UP32AB1234`;
     if (selectedLanguage === 'curl') {
       return `curl -X GET "${url}" \\\n  -H "x-api-key: ${apiKeyToDisplay}"`;
     }
@@ -120,7 +121,7 @@ export default function APIDocs() {
   }, [selectedLanguage, apiKeyToDisplay]);
 
   const vehicleSnippetCode = useMemo(() => {
-    const url = `https://api.dbscore.in/api/v1/vehicles/DL8CAF5031`;
+    const url = `${apiBaseUrl}/api/v1/vehicles/DL8CAF5031`;
     if (selectedLanguage === 'curl') {
       return `curl -X GET "${url}" \\\n  -H "x-api-key: ${apiKeyToDisplay}"`;
     }
@@ -180,7 +181,7 @@ export default function APIDocs() {
 
           <div className="api-endpoint-path-row">
             <span className="method-badge get">GET</span>
-            <span>https://api.dbscore.in{path}</span>
+            <span>{apiBaseUrl}{path}</span>
           </div>
 
           {/* Path Params Section */}
