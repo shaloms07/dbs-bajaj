@@ -198,14 +198,11 @@ export default function TM100Telemetry() {
               >
                 {vehicles.map((v) => (
                   <option key={v.imei} value={v.vehicle_reg_no}>
-                    {v.vehicle_reg_no}
+                    TEST VEHICLE
                   </option>
                 ))}
               </select>
             </label>
-            <div className="text-xs text-gray-500 font-semibold bg-gray-50 px-3 py-1.5 rounded-full border border-gray-200">
-              Connected OBD Telematics source
-            </div>
           </div>
 
           {/* Active Trip banner — always visible when a trip is in progress, regardless of stats */}
