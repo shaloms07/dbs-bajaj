@@ -421,6 +421,106 @@ samp {
   font-size: 13px;
   letter-spacing: 0.05em;
 }
+
+/* ── Vehicle number input: validation states ─────────────────────── */
+
+/* Valid state — green border + soft green glow */
+.reg-input--valid {
+  border-color: #16a34a !important;
+  background: rgba(22, 163, 74, 0.05);
+  box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.12);
+  transition: border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+}
+.reg-input--valid:focus {
+  border-color: #16a34a !important;
+  box-shadow: 0 0 0 4px rgba(22, 163, 74, 0.18);
+}
+
+/* Invalid state — red border + soft red glow */
+.reg-input--invalid {
+  border-color: #dc2626 !important;
+  background: rgba(220, 38, 38, 0.04);
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.10);
+  transition: border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+}
+.reg-input--invalid:focus {
+  border-color: #dc2626 !important;
+  box-shadow: 0 0 0 4px rgba(220, 38, 38, 0.16);
+}
+
+/* ── VehicleNumberInput wrapper ──────────────────────────────────── */
+
+.vehicle-number-input-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  width: 100%;
+}
+
+/* Row that holds the <input> and the inline status icon */
+.vehicle-input-field-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+/* Give the input enough right-padding so text never clips under the icon */
+.vehicle-input-field-row .reg-input {
+  padding-right: 40px;
+}
+
+/* Status icon — absolutely positioned inside the right edge of the input */
+.vehicle-input-status-icon {
+  position: absolute;
+  right: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  opacity: 0;
+  transform: scale(0.7);
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+.vehicle-input-status-icon--valid {
+  opacity: 1;
+  transform: scale(1);
+  color: #16a34a;
+}
+.vehicle-input-status-icon--invalid {
+  opacity: 1;
+  transform: scale(1);
+  color: #dc2626;
+}
+.vehicle-input-status-icon--idle {
+  opacity: 0;
+  transform: scale(0.7);
+}
+
+/* ── Helper / error message beneath the input ────────────────────── */
+
+.vehicle-input-helper {
+  font-size: 11.5px;
+  line-height: 1.4;
+  min-height: 16px;            /* prevent layout shift when message appears/disappears */
+  margin: 0;
+  padding: 0;
+  letter-spacing: 0.01em;
+  /* Animate in smoothly */
+  transition: color 0.15s ease, opacity 0.15s ease;
+}
+.vehicle-input-helper--idle {
+  color: transparent;
+  opacity: 0;
+}
+.vehicle-input-helper--invalid {
+  color: #dc2626;
+  opacity: 1;
+}
+.vehicle-input-helper--valid {
+  color: transparent;
+  opacity: 0;
+}
 .lookup-btn {
   background: var(--accent);
   color: white;
