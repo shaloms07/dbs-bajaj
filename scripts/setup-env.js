@@ -55,6 +55,13 @@ VITE_API_BASE_URL=${apiBaseUrl}
 `;
 
   try {
+    if (fs.existsSync(envPath)) {
+      const existingContent = fs.readFileSync(envPath, 'utf8');
+      if (existingContent === envContent) {
+        console.log(`[setup-env] .env file is already up to date.`);
+        return;
+      }
+    }
     fs.writeFileSync(envPath, envContent, 'utf8');
     console.log(`[setup-env] Successfully wrote .env file to: ${envPath}`);
   } catch (err) {
