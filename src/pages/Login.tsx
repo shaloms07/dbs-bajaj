@@ -25,6 +25,11 @@ export default function Login() {
       setError('Enter credentials');
       return;
     }
+    // Vuln #10: Validate username format — alphanumeric + safe characters only
+    if (!/^[a-zA-Z0-9._@+\-]{1,100}$/.test(username.trim())) {
+      setError('Username contains invalid characters');
+      return;
+    }
     setLoading(true);
     try {
       const session = await loginRequest({ username: username.trim(), password });
@@ -90,6 +95,8 @@ export default function Login() {
                 required
                 className="login-input"
                 placeholder="Username"
+                maxLength={100}
+                autoComplete="username"
               />
             </div>
 
@@ -102,6 +109,8 @@ export default function Login() {
                 required
                 className="login-input"
                 placeholder="Password"
+                maxLength={128}
+                autoComplete="current-password"
               />
             </div>
 

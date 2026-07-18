@@ -104,6 +104,7 @@ export default function VehicleNumberInput({
           aria-label="Vehicle registration number"
           aria-describedby={`${id}-helper`}
           aria-invalid={validationState === 'invalid'}
+          maxLength={11}
         />
 
         {/* Validation state icon — appears inside the right edge of input */}
