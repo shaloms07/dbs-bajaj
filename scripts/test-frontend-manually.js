@@ -163,7 +163,7 @@ async function run() {
 
     // 3. Perform Login
     console.log('Entering login credentials...');
-    await page.type('input[placeholder="Username"]', 'bgil.admin');
+    await page.type('input[placeholder="Email address"]', 'bgil.admin@example.com');
     await page.type('input[placeholder="Password"]', 'somepassword');
     await page.screenshot({ path: path.join(screenshotDir, '03_login_filled.png') });
     

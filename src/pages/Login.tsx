@@ -4,9 +4,10 @@ import bannerImage from '../assets/magic_edit3.png';
 import { useDefaultBranding } from '../branding/useBranding';
 import { useAuthStore } from '../store/authStore';
 import { login as loginRequest } from '../services/authService';
+import { validateEmail } from '../utils/emailValidation';
 
 export default function Login() {
-  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -21,18 +22,22 @@ export default function Login() {
   async function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError('');
-    if (!username || !password) {
+    
+    const trimmedEmail = email.trim();
+    if (!trimmedEmail || !password) {
       setError('Enter credentials');
       return;
     }
-    // Vuln #10: Validate username format — alphanumeric + safe characters only
-    if (!/^[a-zA-Z0-9._@+\-]{1,100}$/.test(username.trim())) {
-      setError('Username contains invalid characters');
+
+    // Validate email format and character limit
+    if (!validateEmail(trimmedEmail) || trimmedEmail.length > 100) {
+      setError('Please enter a valid email address');
       return;
     }
+
     setLoading(true);
     try {
-      const session = await loginRequest({ username: username.trim(), password });
+      const session = await loginRequest({ username: trimmedEmail, password });
       setAuth(session.user);
       navigate('/lookup');
     } catch (err) {
@@ -87,16 +92,16 @@ export default function Login() {
 
           <form onSubmit={submit} className="login-form">
             <div>
-              <label className="login-label">Username</label>
+              <label className="login-label">Email Address</label>
               <input
-                type="text"
-                value={username}
-                onChange={(e: ChangeEvent<HTMLInputElement>) => setUsername(e.target.value)}
+                type="email"
+                value={email}
+                onChange={(e: ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
                 required
                 className="login-input"
-                placeholder="Username"
+                placeholder="Email address"
                 maxLength={100}
-                autoComplete="username"
+                autoComplete="email"
               />
             </div>
 
