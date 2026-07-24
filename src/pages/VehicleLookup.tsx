@@ -11,11 +11,6 @@ type LookupRouteState = {
   includeRc?: boolean;
 };
 
-type LookupRouteState = {
-  regNo?: string;
-  includeRc?: boolean;
-};
-
 function formatBandLabel(value: string) {
   return value
     .replace(/_/g, " ")
