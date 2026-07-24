@@ -4,6 +4,12 @@ import { useBranding } from "../branding/useBranding";
 import { useScoreLookup } from "../hooks/useScoreLookup";
 import { ScoreResult } from "../types/score";
 import { scoreColor } from "../utils/scoreColor";
+import VehicleNumberInput from "../components/VehicleNumberInput";
+
+type LookupRouteState = {
+  regNo?: string;
+  includeRc?: boolean;
+};
 
 type LookupRouteState = {
   regNo?: string;
@@ -532,11 +538,10 @@ export default function VehicleLookup() {
             >
               <div>
                 <div className="field-label">Registration Number</div>
-                <input
-                  className="reg-input"
+                <VehicleNumberInput
+                  id="reg-number-input"
                   value={regInput}
-                  placeholder="Enter vehicle number"
-                  onChange={(e) => setRegInput(e.target.value.toUpperCase())}
+                  onChange={setRegInput}
                 />
               </div>
               <button type="submit" className="lookup-btn">

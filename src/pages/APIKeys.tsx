@@ -312,6 +312,7 @@ export default function APIKeys() {
                     onChange={(e) => setNewKeyName(e.target.value)}
                     placeholder="e.g. Underwriting Production"
                     autoFocus
+                    maxLength={100}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' && newKeyName.trim() && !createMutation.isPending) {
                         handleCreateKey();
@@ -421,6 +422,7 @@ export default function APIKeys() {
                 onChange={(e) => setEditingName(e.target.value)}
                 placeholder="e.g. Underwriting Live"
                 autoFocus
+                maxLength={100}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && editingName.trim() && !renameMutation.isPending) {
                     handleSaveRename().then(() => setIsRenameOpen(false));

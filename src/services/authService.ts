@@ -46,6 +46,13 @@ export async function login(payload: LoginPayload): Promise<AuthSession> {
   if (!username || !payload.password) {
     throw new Error('Enter credentials');
   }
+  // Vuln #9: Enforce max length before hitting the API (defense-in-depth)
+  if (username.length > 100) {
+    throw new Error('Username must not exceed 100 characters');
+  }
+  if (payload.password.length > 128) {
+    throw new Error('Password must not exceed 128 characters');
+  }
 
   let response: Response;
 

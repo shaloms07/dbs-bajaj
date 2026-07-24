@@ -23,7 +23,8 @@ export interface BrandingConfig {
 
 const BRAND_BY_IDENTIFIER: Record<string, BrandId> = {
   'insurer@example.com': 'dbs',
-  'bgil.admin': 'bajaj'
+  'bgil.admin': 'bajaj',
+  'bgil.admin@example.com': 'bajaj'
 };
 
 export const DEFAULT_BRAND_ID: BrandId = 'dbs';
