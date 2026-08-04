@@ -555,7 +555,7 @@ export default function VehicleLookup() {
               </button>
             </form>
 
-            <div className="lookup-switch-row">
+            {/* <div className="lookup-switch-row">
               <div className="lookup-switch-copy">
                 <span className="lookup-switch-label">View RC details</span>
                 <strong>{includeRc ? "On" : "Off"}</strong>
@@ -571,9 +571,9 @@ export default function VehicleLookup() {
                 <span className="lookup-switch-track">
                   <span className="lookup-switch-thumb" />
                 </span>
-                {/* <span className="lookup-switch-state">{includeRc ? 'Turn on' : 'Turn off'}</span> */}
+                <span className="lookup-switch-state">{includeRc ? 'Turn on' : 'Turn off'}</span>
               </button>
-            </div>
+            </div> */}
           </div>
         </aside>
         {/* <div className="recent-queries">
