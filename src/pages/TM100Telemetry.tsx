@@ -23,9 +23,24 @@ function formatDuration(totalSeconds: number | null) {
   return `${hours}h ${minutes}m`;
 }
 
-function formatDateTime(value: string | null) {
-  if (!value) return 'N/A';
-  return new Date(value).toLocaleString('en-IN', {
+export function parseUtcDate(value: string | null): Date | null {
+  if (!value) return null;
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+
+  let isoStr = trimmed.replace(' ', 'T');
+  if (!/[Zz]$|[+-]\d{2}:?\d{2}$/.test(isoStr)) {
+    isoStr += 'Z';
+  }
+
+  const d = new Date(isoStr);
+  return isNaN(d.getTime()) ? null : d;
+}
+
+export function formatDateTime(value: string | null) {
+  const d = parseUtcDate(value);
+  if (!d) return 'N/A';
+  return d.toLocaleString('en-IN', {
     day: '2-digit',
     month: 'short',
     year: 'numeric',
@@ -35,9 +50,10 @@ function formatDateTime(value: string | null) {
   });
 }
 
-function formatElapsed(startedAt: string | null): string {
-  if (!startedAt) return 'N/A';
-  const diffMs = Date.now() - new Date(startedAt).getTime();
+export function formatElapsed(startedAt: string | null): string {
+  const d = parseUtcDate(startedAt);
+  if (!d) return 'N/A';
+  const diffMs = Date.now() - d.getTime();
   if (diffMs < 0) return 'N/A';
   const totalMinutes = Math.floor(diffMs / 60000);
   const hours = Math.floor(totalMinutes / 60);
@@ -45,6 +61,7 @@ function formatElapsed(startedAt: string | null): string {
   if (hours > 0) return `${hours}h ${minutes}m`;
   return `${minutes} min`;
 }
+
 
 
 
